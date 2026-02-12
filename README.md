@@ -5,6 +5,7 @@ A local FastAPI + Next.js application for quick reference during system design i
 ## Features
 
 ### Core Features
+
 - 🔍 **Full-text search** across technologies and use cases
 - 🏷️ **Smart filtering** by category, CAP leaning, and consistency model
 - ⌨️ **Keyboard shortcuts** for lightning-fast navigation
@@ -14,12 +15,14 @@ A local FastAPI + Next.js application for quick reference during system design i
 - 📋 **Copy answer skeleton** for quick interview prep
 
 ### NEW: Reference Library (Based on Hello Interview)
+
 - 📊 **Numbers to Know** - Essential latency, throughput, capacity, and availability metrics
 - 🎯 **Delivery Framework** - Structured 4-phase interview approach with time allocation
 - 📋 **Assessment Rubric** - Understand how interviewers evaluate candidates (4 competencies)
 - 🔧 **Common Patterns** - 7 critical patterns (Real-Time Updates, Contention, Multi-Step Processes, Scaling Reads/Writes, Large Blobs, Long-Running Tasks)
 
 ### NEW: Extended Scenario Coverage
+
 - 💳 **Payments** - Strong consistency, idempotency, two-phase commit
 - 💬 **Chat** - Real-time messaging with WebSockets
 - 📰 **Feed** - Hybrid fan-out, caching strategies
@@ -56,9 +59,6 @@ venv\Scripts\activate     # On Windows
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Import data from spreadsheet
-python import_data.py
 
 # Start the API server
 uvicorn main:app --reload --port 8000
@@ -98,12 +98,14 @@ python import_data.py --refresh
 This project uses a **two-database system** for easy collaboration:
 
 #### `starter.db` (Version Controlled)
+
 - Contains all curated scenarios (Uber, Bit.ly, Dropbox, etc.)
 - Committed to Git and shared with the team
 - Read-only reference point
 - **Everyone gets this when they clone the repo**
 
 #### `system_design_ref.db` (Your Working Copy)
+
 - Automatically created from `starter.db` on first run
 - This is where you can add your own scenarios and modifications
 - **NOT** committed to Git (stays local to your machine)
@@ -173,6 +175,7 @@ Toggle between modes with `Cmd/Ctrl + I` or the mode switcher in the header.
 Click **💡 Scenarios** in the header to see pre-configured technology stacks for common interview scenarios:
 
 #### Infrastructure Patterns
+
 - **Payments**: DynamoDB, PostgreSQL, SQS, Lambda, Redis - Strong consistency, idempotency
 - **Chat**: DynamoDB, ElastiCache, Kinesis, Lambda, CloudFront - Real-time messaging
 - **Feed**: DynamoDB, ElastiCache, S3, CloudFront, Lambda - Hybrid fan-out
@@ -181,6 +184,7 @@ Click **💡 Scenarios** in the header to see pre-configured technology stacks f
 - **Auth**: Cognito, DynamoDB, ElastiCache, Lambda, CloudFront - JWT + RBAC
 
 #### Real Systems
+
 - **Uber**: PostgreSQL, Redis, SQS, Lambda, Step Functions - Geospatial matching
 - **Bit.ly**: PostgreSQL, Redis, CloudFront, Lambda - URL shortening at scale
 - **Dropbox**: S3, DynamoDB, CloudFront, Lambda - Large file handling
@@ -193,21 +197,27 @@ Click **💡 Scenarios** in the header to see pre-configured technology stacks f
 Click **📚 Reference** in the header to access essential interview preparation material:
 
 #### 📊 Numbers to Know
+
 Memorize these critical metrics for credible capacity estimation:
+
 - **Latency**: L1 cache (0.5ns), RAM (100ns), SSD (150μs), Network cross-region (40-150ms)
 - **Throughput**: Memory (10 GB/s), SSD (500 MB/s), 10 Gbps network (1.25 GB/s)
 - **Capacity**: QPS per server (10K-50K), Redis ops (100K+), WebSocket connections (10K-100K)
 - **Availability**: 99.9% (8.77h downtime/year), 99.99% (52.6min), 99.999% (5.26min)
 
 #### 🎯 Delivery Framework
+
 Structured approach to nail the interview in 45 minutes:
+
 1. **Requirements Gathering** (5-10 min) - Clarify functional/non-functional requirements
 2. **High-Level Design** (10-15 min) - Draw system diagram, explain component interactions
 3. **Deep Dives** (15-20 min) - Focus on 2-3 critical areas (schema, scaling, caching, failures)
 4. **Wrap-Up** (5 min) - Summarize, discuss alternatives, address concerns
 
 #### 📋 Assessment Rubric
+
 Understand how interviewers evaluate you across 4 competencies:
+
 - **Problem Navigation** (30%) - Breaking down ambiguous problems, prioritizing correctly
 - **Solution Design** (30%) - Well-structured, scalable architectures
 - **Technical Excellence** (25%) - Knowledge of technologies, patterns, trade-offs
@@ -216,7 +226,9 @@ Understand how interviewers evaluate you across 4 competencies:
 Includes level expectations (Mid-Level, Senior, Staff+) and red/green flags.
 
 #### 🔧 Common Patterns
+
 Master these 7 patterns that appear in almost every system design interview:
+
 1. **Real-Time Updates** - WebSockets, SSE, Long Polling comparison
 2. **Dealing with Contention** - Optimistic/pessimistic locking, distributed locks, queues
 3. **Multi-Step Processes** - Sagas (choreography vs orchestration), 2PC, Outbox pattern
