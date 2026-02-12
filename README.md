@@ -1,4 +1,5 @@
 # System Design Reference App
+<img width="748" height="648" alt="image" src="https://github.com/user-attachments/assets/5ab77b06-340b-4f87-87fb-2d7c10f0fbf4" />
 
 A local FastAPI + Next.js application for quick reference during system design interviews. Features searchable tools, scenario-based suggestions, and keyboard-driven navigation.
 
