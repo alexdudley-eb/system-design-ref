@@ -8,6 +8,7 @@ venv/
 env/
 ENV/
 *.db
+!backend/starter.db
 *.sqlite3
 
 # Node

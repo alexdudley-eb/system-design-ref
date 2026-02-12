@@ -7,6 +7,7 @@ from datetime import datetime
 
 from database import get_db, init_db
 from models import Tool, ToolDeep, Favorite
+from scenario_data import SCENARIO_BLUEPRINTS
 
 app = FastAPI(title="System Design Reference API")
 
@@ -139,55 +140,35 @@ def get_tool_detail(tool_id: int, db: Session = Depends(get_db)):
     
     return ToolDetailResponse(**tool_dict)
 
-SCENARIO_MAPPINGS = {
-    "payments": {
-        "tools": ["DynamoDB", "PostgreSQL", "SQS", "Lambda", "Redis"],
-        "reasoning": "Strong consistency for transactions, async processing for reconciliation, caching for fraud checks"
-    },
-    "chat": {
-        "tools": ["DynamoDB", "ElastiCache", "Kinesis", "Lambda", "CloudFront"],
-        "reasoning": "Low latency reads, real-time message delivery, global distribution"
-    },
-    "feed": {
-        "tools": ["DynamoDB", "ElastiCache", "S3", "CloudFront", "Lambda"],
-        "reasoning": "Fast reads with eventual consistency, CDN for media, scalable fan-out"
-    },
-    "analytics": {
-        "tools": ["S3", "Athena", "Redshift", "Kinesis", "Lambda"],
-        "reasoning": "Data lake for raw events, OLAP for aggregations, real-time streaming"
-    },
-    "search": {
-        "tools": ["OpenSearch", "DynamoDB", "CloudFront", "Lambda"],
-        "reasoning": "Full-text search, metadata storage, edge caching for popular queries"
-    },
-    "auth": {
-        "tools": ["Cognito", "DynamoDB", "ElastiCache", "Lambda", "CloudFront"],
-        "reasoning": "Identity management, session storage, token caching, global availability"
-    }
-}
-
 @app.get("/api/scenarios/{scenario_type}")
 def get_scenario_suggestions(scenario_type: str, db: Session = Depends(get_db)):
-    if scenario_type not in SCENARIO_MAPPINGS:
+    if scenario_type not in SCENARIO_BLUEPRINTS:
         raise HTTPException(status_code=404, detail="Scenario not found")
     
-    scenario = SCENARIO_MAPPINGS[scenario_type]
-    tool_names = scenario["tools"]
+    blueprint = SCENARIO_BLUEPRINTS[scenario_type]
+    tool_names = blueprint["tools"]
     
     tools = db.query(Tool).filter(Tool.name.in_(tool_names)).all()
     
     favorite_tool_ids = {f.tool_id for f in db.query(Favorite.tool_id).all()}
     
-    results = []
+    tool_results = []
     for tool in tools:
         tool_dict = ToolResponse.from_orm(tool).dict()
         tool_dict["is_favorited"] = tool.id in favorite_tool_ids
-        results.append(tool_dict)
+        tool_results.append(tool_dict)
     
     return {
         "scenario": scenario_type,
-        "reasoning": scenario["reasoning"],
-        "tools": results
+        "title": blueprint["title"],
+        "description": blueprint["description"],
+        "requirements": blueprint["requirements"],
+        "core_entities": blueprint["core_entities"],
+        "api": blueprint["api"],
+        "high_level": blueprint["high_level"],
+        "deep_dive": blueprint["deep_dive"],
+        "reasoning": blueprint["reasoning"],
+        "tools": tool_results,
     }
 
 @app.get("/api/favorites", response_model=List[FavoriteResponse])

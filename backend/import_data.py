@@ -15,6 +15,13 @@ def clean_cell_value(cell_value):
         return cell_value.strip() if cell_value.strip() else None
     return str(cell_value)
 
+def get_header_flexible(headers, *variants):
+    """Try multiple header name variants, return the column index if found."""
+    for variant in variants:
+        if variant in headers:
+            return headers[variant]
+    return None
+
 def import_quick_reference(ws, db: Session):
     print("Importing Quick Reference sheet...")
     
@@ -53,9 +60,9 @@ def import_quick_reference(ws, db: Session):
             avoid_when=clean_cell_value(row[headers.get("Avoid When", 7) - 1].value),
             tradeoffs=clean_cell_value(row[headers.get("Key Tradeoffs", 8) - 1].value),
             scaling_pattern=clean_cell_value(row[headers.get("Scaling Pattern", 9) - 1].value),
-            official_docs_url=clean_cell_value(row[headers.get("Official Docs", 10) - 1].value),
-            deep_dive_url_1=clean_cell_value(row[headers.get("Deep Dive 1", 11) - 1].value),
-            deep_dive_url_2=clean_cell_value(row[headers.get("Deep Dive 2", 12) - 1].value),
+            official_docs_url=clean_cell_value(row[(get_header_flexible(headers, "Official Docs", "Docs_URL", "official_docs_url") or 10) - 1].value),
+            deep_dive_url_1=clean_cell_value(row[(get_header_flexible(headers, "Deep Dive 1", "Deep_Dive_1", "deep_dive_url_1") or 11) - 1].value),
+            deep_dive_url_2=clean_cell_value(row[(get_header_flexible(headers, "Deep Dive 2", "Deep_Dive_2", "deep_dive_url_2") or 12) - 1].value),
             aws_only=1 if "AWS" in category or "Amazon" in name else 0
         )
         

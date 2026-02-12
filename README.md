@@ -73,6 +73,46 @@ cd backend
 python import_data.py --refresh
 ```
 
+### 4. Understanding the Database Setup
+
+This project uses a **two-database system** for easy collaboration:
+
+#### `starter.db` (Version Controlled)
+- Contains all curated scenarios (Uber, Bit.ly, Dropbox, etc.)
+- Committed to Git and shared with the team
+- Read-only reference point
+- **Everyone gets this when they clone the repo**
+
+#### `system_design_ref.db` (Your Working Copy)
+- Automatically created from `starter.db` on first run
+- This is where you can add your own scenarios and modifications
+- **NOT** committed to Git (stays local to your machine)
+- Each team member has their own independent copy
+
+#### Resetting Your Database
+
+If you want to get the latest scenarios from the team or start fresh:
+
+```bash
+cd backend
+rm system_design_ref.db
+# Restart the server - it will auto-copy from starter.db
+uvicorn main:app --reload --port 8000
+```
+
+#### For Maintainers: Updating starter.db
+
+When you want to share new scenarios with the team:
+
+```bash
+cd backend
+# After adding scenarios to your working database
+cp system_design_ref.db starter.db
+git add starter.db
+git commit -m "Add new scenarios to starter database"
+git push
+```
+
 ## Usage
 
 ### Keyboard Shortcuts

@@ -31,8 +31,53 @@ export interface ToolDetail extends Tool {
   deep_study?: ToolDeep
 }
 
+export interface ScenarioRequirements {
+  functional: string[]
+  non_functional: string[]
+  out_of_scope: string[]
+}
+
+export interface ScenarioEntity {
+  name: string
+  fields: string[]
+}
+
+export interface ScenarioEndpoint {
+  method: string
+  path: string
+  description: string
+  auth?: string | null
+  request_body?: string | null
+  response?: string | null
+}
+
+export interface ScenarioHighLevel {
+  description: string
+  components: string[]
+  notes: string[]
+}
+
+export interface ScenarioDeepDiveFlow {
+  name: string
+  steps: string[]
+}
+
+export interface ScenarioDeepDive {
+  flows: ScenarioDeepDiveFlow[]
+  caching?: string
+  scaling?: string
+  notes: string[]
+}
+
 export interface ScenarioResponse {
   scenario: string
+  title: string
+  description: string
+  requirements: ScenarioRequirements
+  core_entities: ScenarioEntity[]
+  api: ScenarioEndpoint[]
+  high_level: ScenarioHighLevel
+  deep_dive: ScenarioDeepDive
   reasoning: string
   tools: Tool[]
 }

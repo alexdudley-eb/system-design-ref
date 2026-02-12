@@ -1,43 +1,52 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { getScenarioSuggestions } from '@/lib/api'
-import styles from './ScenarioPrompts.module.css'
+import { useState } from "react";
+import { ScenarioResponse } from "@/lib/api";
+import { getScenarioSuggestions } from "@/lib/api";
+import ScenarioDetail from "./ScenarioDetail";
+import styles from "./ScenarioPrompts.module.css";
 
 const SCENARIOS = [
-  { id: 'payments', label: 'Payments', icon: '💳' },
-  { id: 'chat', label: 'Chat', icon: '💬' },
-  { id: 'feed', label: 'Feed', icon: '📰' },
-  { id: 'analytics', label: 'Analytics', icon: '📊' },
-  { id: 'search', label: 'Search', icon: '🔍' },
-  { id: 'auth', label: 'Auth', icon: '🔐' },
-]
+  { id: "payments", label: "Payments", icon: "💳" },
+  { id: "chat", label: "Chat", icon: "💬" },
+  { id: "feed", label: "Feed", icon: "📰" },
+  { id: "analytics", label: "Analytics", icon: "📊" },
+  { id: "search", label: "Search", icon: "🔍" },
+  { id: "auth", label: "Auth", icon: "🔐" },
+  { id: "uber", label: "Uber", icon: "🚗" },
+  { id: "bitly", label: "URL Shortener", icon: "🔗" },
+  { id: "dropbox", label: "Dropbox", icon: "📦" },
+];
 
 export default function ScenarioPrompts() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [selectedScenario, setSelectedScenario] = useState<string | null>(null)
-  const [scenarioData, setScenarioData] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedScenario, setSelectedScenario] = useState<string | null>(null);
+  const [scenarioData, setScenarioData] = useState<ScenarioResponse | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
 
   const handleScenarioSelect = async (scenarioId: string) => {
-    setLoading(true)
-    setSelectedScenario(scenarioId)
-    
+    if (selectedScenario === scenarioId) return;
+
+    setLoading(true);
+    setSelectedScenario(scenarioId);
+
     try {
-      const data = await getScenarioSuggestions(scenarioId)
-      setScenarioData(data)
+      const data = await getScenarioSuggestions(scenarioId);
+      setScenarioData(data);
     } catch (error) {
-      console.error('Failed to load scenario:', error)
+      console.error("Failed to load scenario:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const closeModal = () => {
-    setIsOpen(false)
-    setSelectedScenario(null)
-    setScenarioData(null)
-  }
+    setIsOpen(false);
+    setSelectedScenario(null);
+    setScenarioData(null);
+  };
 
   return (
     <>
@@ -47,7 +56,10 @@ export default function ScenarioPrompts() {
 
       {isOpen && (
         <div className={styles.modal} onClick={closeModal}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles.modalHeader}>
               <h2>System Design Scenarios</h2>
               <button className={styles.closeButton} onClick={closeModal}>
@@ -60,7 +72,9 @@ export default function ScenarioPrompts() {
                 <button
                   key={scenario.id}
                   className={`${styles.scenarioCard} ${
-                    selectedScenario === scenario.id ? styles.scenarioCardActive : ''
+                    selectedScenario === scenario.id
+                      ? styles.scenarioCardActive
+                      : ""
                   }`}
                   onClick={() => handleScenarioSelect(scenario.id)}
                 >
@@ -75,22 +89,13 @@ export default function ScenarioPrompts() {
             )}
 
             {scenarioData && !loading && (
-              <div className={styles.scenarioResult}>
-                <h3>Recommended Stack</h3>
-                <p className={styles.reasoning}>{scenarioData.reasoning}</p>
-                
-                <div className={styles.toolsList}>
-                  {scenarioData.tools.map((tool: any) => (
-                    <div key={tool.id} className={styles.toolChip}>
-                      {tool.name}
-                    </div>
-                  ))}
-                </div>
+              <div className={styles.detailContainer}>
+                <ScenarioDetail data={scenarioData} />
               </div>
             )}
           </div>
         </div>
       )}
     </>
-  )
+  );
 }
