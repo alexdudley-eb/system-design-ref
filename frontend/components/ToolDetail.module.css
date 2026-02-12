@@ -1,0 +1,161 @@
+.toolDetail {
+  max-width: 900px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.spinner {
+  color: var(--color-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.toolName {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--color-text);
+}
+
+.badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.categoryBadge {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.badge {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text);
+  border-radius: 4px;
+}
+
+.copyButton {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.copyButton:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
+}
+
+.oneliner {
+  background-color: var(--color-bg-secondary);
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid var(--color-primary);
+  margin-bottom: 24px;
+}
+
+.oneliner h2 {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px 0;
+}
+
+.onelineText {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.6;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+}
+
+.content {
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+.content p {
+  margin: 8px 0;
+}
+
+.emptyContent {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 32px 0;
+}
+
+.deepStudyTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 24px 0;
+}
+
+.links {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--color-border);
+}
+
+.links h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 12px 0;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link {
+  color: var(--color-primary);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.link:hover {
+  color: var(--color-primary-hover);
+}

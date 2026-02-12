@@ -1,0 +1,277 @@
+# System Design Reference App
+
+A local FastAPI + Next.js application for quick reference during system design interviews. Features searchable tools, scenario-based suggestions, and keyboard-driven navigation.
+
+## Features
+
+- 🔍 **Full-text search** across technologies and use cases
+- 🏷️ **Smart filtering** by category, CAP leaning, and consistency model
+- ⌨️ **Keyboard shortcuts** for lightning-fast navigation
+- 🎯 **Interview mode** for concise talking points
+- 📚 **Deep study mode** with failure modes, tuning gotchas, and more
+- 💡 **Scenario prompts** for common system design patterns (Payments, Chat, Feed, etc.)
+- ⭐ **Favorites** to pin your most-used tools
+- 📋 **Copy answer skeleton** for quick interview prep
+
+## Prerequisites
+
+- **Python 3.11+**
+- **Node 20+**
+- **npm** (comes with Node)
+
+## Quick Start
+
+### 1. Backend Setup
+
+```bash
+cd backend
+
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate  # On macOS/Linux
+# OR
+venv\Scripts\activate     # On Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Import data from spreadsheet
+python import_data.py
+
+# Start the API server
+uvicorn main:app --reload --port 8000
+```
+
+The backend will be available at `http://localhost:8000`
+
+### 2. Frontend Setup
+
+Open a **new terminal window**:
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000`
+
+### 3. Add Your Data
+
+Place your `system-design-tech-cheatsheet.xlsx` file in the `data/` directory.
+
+If you need to refresh the database after updating the spreadsheet:
+
+```bash
+cd backend
+python import_data.py --refresh
+```
+
+## Usage
+
+### Keyboard Shortcuts
+
+| Shortcut       | Action                          |
+| -------------- | ------------------------------- |
+| `Cmd/Ctrl + K` | Focus search bar                |
+| `↑` / `↓`      | Navigate tool list              |
+| `Enter`        | Select focused tool             |
+| `Esc`          | Clear search / close detail     |
+| `Cmd/Ctrl + F` | Toggle favorites view           |
+| `Cmd/Ctrl + I` | Toggle interview/study mode     |
+| `1-9`          | Jump to category (experimental) |
+
+### Search & Filter
+
+- Type in the search bar to find tools by name, category, or use case
+- Use category chips to filter by tool type (DB, Cache, Queue, etc.)
+- Toggle CAP leaning (CP, AP, Tunable)
+- Select consistency model (Strong, Eventual, Causal, Session)
+- Enable "AWS only" to filter cloud-specific services
+
+### Interview Mode vs. Study Mode
+
+- **Interview Mode (🎯)**: Shows concise one-liners, best-for, avoid-when, and key tradeoffs
+- **Deep Study Mode (📚)**: Includes everything from interview mode PLUS:
+  - Failure modes
+  - Multi-region / DR notes
+  - Tuning gotchas
+  - Observability signals
+  - Alternatives
+  - Interview prompts
+
+Toggle between modes with `Cmd/Ctrl + I` or the mode switcher in the header.
+
+### Scenario Prompts
+
+Click **💡 Scenarios** in the header to see pre-configured technology stacks for common interview scenarios:
+
+- **Payments**: DynamoDB, PostgreSQL, SQS, Lambda, Redis
+- **Chat**: DynamoDB, ElastiCache, Kinesis, Lambda, CloudFront
+- **Feed**: DynamoDB, ElastiCache, S3, CloudFront, Lambda
+- **Analytics**: S3, Athena, Redshift, Kinesis, Lambda
+- **Search**: OpenSearch, DynamoDB, CloudFront, Lambda
+- **Auth**: Cognito, DynamoDB, ElastiCache, Lambda, CloudFront
+
+### Favorites
+
+Click the **☆** star icon on any tool card to add it to your favorites. Starred tools appear at the top of your list for quick access.
+
+### Copy Answer Skeleton
+
+In the tool detail view, click **📋 Copy Answer** to copy a formatted answer skeleton to your clipboard. Perfect for preparing quick responses during interviews.
+
+## Project Structure
+
+```
+system-design-ref/
+├── backend/
+│   ├── main.py                 # FastAPI application
+│   ├── models.py               # Database models
+│   ├── database.py             # Database connection
+│   ├── import_data.py          # XLSX importer
+│   ├── requirements.txt        # Python dependencies
+│   ├── start.sh                # Quick start script
+│   └── system_design_ref.db    # SQLite database (generated)
+├── frontend/
+│   ├── app/                    # Next.js app directory
+│   ├── components/             # React components
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # API client
+│   ├── package.json            # Node dependencies
+│   └── start.sh                # Quick start script (optional)
+├── data/
+│   └── system-design-tech-cheatsheet.xlsx
+└── README.md
+```
+
+## API Endpoints
+
+### Tools
+
+- `GET /api/tools` - List all tools with optional filters
+  - Query params: `category`, `cap_leaning`, `consistency_model`, `aws_only`
+- `GET /api/tools/search?q=<query>` - Full-text search
+- `GET /api/tools/:id` - Get detailed info for a single tool
+
+### Scenarios
+
+- `GET /api/scenarios/:type` - Get suggested stack for scenario
+  - Types: `payments`, `chat`, `feed`, `analytics`, `search`, `auth`
+
+### Favorites
+
+- `GET /api/favorites` - List favorited tools
+- `POST /api/favorites/:tool_id` - Add tool to favorites
+- `DELETE /api/favorites/:tool_id` - Remove from favorites
+
+### Utility
+
+- `GET /api/categories` - List all available categories
+
+## Updating Data
+
+To update your reference data:
+
+1. Edit `system-design-tech-cheatsheet.xlsx`
+2. Ensure it has "Quick Reference" and "Deep Study" sheets
+3. Run the importer with refresh flag:
+   ```bash
+   cd backend
+   python import_data.py --refresh
+   ```
+4. Restart the backend server
+
+## Troubleshooting
+
+### Backend won't start
+
+- Make sure you've activated the virtual environment: `source venv/bin/activate`
+- Check that all dependencies are installed: `pip install -r requirements.txt`
+- Verify the database exists: `python import_data.py`
+
+### Frontend won't start
+
+- Make sure you've installed dependencies: `npm install`
+- Check Node version: `node --version` (should be 20+)
+- Try deleting `node_modules` and `.next` folders, then reinstall
+
+### Database import fails
+
+- Verify the XLSX file exists at `../data/system-design-tech-cheatsheet.xlsx`
+- Check that the file has "Quick Reference" and "Deep Study" sheets
+- Ensure column headers match expected format (Technology, Category, etc.)
+
+### CORS errors
+
+- Make sure the backend is running on port 8000
+- Make sure the frontend is running on port 3000
+- Check that both servers are running simultaneously
+
+### Changes not appearing
+
+- For backend changes: restart the FastAPI server
+- For frontend changes: refresh the browser (Next.js auto-reloads)
+- For data changes: re-run `python import_data.py --refresh`
+
+## Production Build
+
+To create an optimized production build:
+
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+The production server will run on port 3000.
+
+## Interview Setup Workflow
+
+For actual interview use:
+
+1. Open two terminal windows
+2. **Terminal 1** (Backend):
+   ```bash
+   cd backend
+   source venv/bin/activate
+   uvicorn main:app --reload --port 8000
+   ```
+3. **Terminal 2** (Frontend):
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+4. Open browser to `http://localhost:3000`
+5. Position on second monitor (if allowed during interview)
+6. Use keyboard shortcuts for fast navigation
+7. Switch to interview mode (`Cmd+I`) for concise talking points
+
+## Tech Stack
+
+- **Backend**: FastAPI, SQLAlchemy, SQLite, openpyxl
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: CSS Modules with CSS custom properties
+
+## Future Enhancements
+
+- [ ] Semantic search with embeddings
+- [ ] "Quiz me" mode for practice
+- [ ] Export favorites as markdown
+- [ ] Dark mode
+- [ ] Mobile responsive improvements
+- [ ] Offline mode with static export
+
+## License
+
+MIT
+
+---
+
+**Built for crushing system design interviews. Study hard, deploy with confidence, lock and load—because when the pressure's on, you execute flawlessly.**

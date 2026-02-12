@@ -1,0 +1,119 @@
+.filterPanel {
+  padding: 16px 24px;
+  background-color: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filterSection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.filterChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg);
+}
+
+.chipActive {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.filterButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.filterButton {
+  padding: 6px 16px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.filterButton:hover {
+  border-color: var(--color-primary);
+}
+
+.filterButtonActive {
+  background-color: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.filterSelect {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  min-width: 140px;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.filterCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--color-text);
+}
+
+.filterCheckbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.clearButton {
+  padding: 6px 16px;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-secondary);
+  border-radius: 4px;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.clearButton:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text);
+}

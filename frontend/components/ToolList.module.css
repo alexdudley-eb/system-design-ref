@@ -1,0 +1,117 @@
+.toolList {
+  padding: 8px;
+}
+
+.toolCard {
+  padding: 16px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toolCard:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.toolCardSelected {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg-secondary);
+  box-shadow: var(--shadow-md);
+}
+
+.toolCardFocused {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.toolHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.toolName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.favoriteButton {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--color-warning);
+  padding: 4px;
+  transition: transform 0.2s;
+}
+
+.favoriteButton:hover {
+  transform: scale(1.2);
+}
+
+.toolMeta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.categoryBadge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.capBadge {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text);
+  border-radius: 4px;
+}
+
+.toolOneliner {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.emptyHint {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.errorMessage {
+  color: var(--color-danger);
+}
+
+.spinner {
+  color: var(--color-primary);
+  animation: pulse 1.5s ease-in-out infinite;
+}
