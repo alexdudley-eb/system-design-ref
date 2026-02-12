@@ -8,6 +8,7 @@ from datetime import datetime
 from database import get_db, init_db
 from models import Tool, ToolDeep, Favorite
 from scenario_data import SCENARIO_BLUEPRINTS
+from reference_data import NUMBERS_TO_KNOW, DELIVERY_FRAMEWORK, ASSESSMENT_RUBRIC, COMMON_PATTERNS
 
 app = FastAPI(title="System Design Reference API")
 
@@ -209,6 +210,34 @@ def remove_favorite(tool_id: int, db: Session = Depends(get_db)):
 def get_categories(db: Session = Depends(get_db)):
     categories = db.query(Tool.category).distinct().all()
     return [cat[0] for cat in categories if cat[0]]
+
+@app.get("/api/reference/numbers")
+def get_numbers_to_know():
+    """Get system design numbers and metrics to memorize"""
+    return NUMBERS_TO_KNOW
+
+@app.get("/api/reference/framework")
+def get_delivery_framework():
+    """Get the structured interview delivery framework"""
+    return DELIVERY_FRAMEWORK
+
+@app.get("/api/reference/rubric")
+def get_assessment_rubric():
+    """Get the interviewer assessment rubric"""
+    return ASSESSMENT_RUBRIC
+
+@app.get("/api/reference/patterns")
+def get_common_patterns():
+    """Get common system design patterns"""
+    return COMMON_PATTERNS
+
+@app.get("/api/reference/patterns/{pattern_name}")
+def get_pattern_detail(pattern_name: str):
+    """Get details for a specific pattern"""
+    pattern = COMMON_PATTERNS.get(pattern_name)
+    if not pattern:
+        raise HTTPException(status_code=404, detail="Pattern not found")
+    return pattern
 
 if __name__ == "__main__":
     import uvicorn

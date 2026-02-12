@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ScenarioResponse } from '@/lib/api'
+import { ScenarioResponse, Tool } from '@/lib/api'
+import ToolModal from './ToolModal'
 import styles from './ScenarioDetail.module.css'
 
 const TABS = [
@@ -29,6 +30,18 @@ interface ScenarioDetailProps {
 
 export default function ScenarioDetail({ data }: ScenarioDetailProps) {
   const [activeTab, setActiveTab] = useState<TabId>('requirements')
+  const [selectedTool, setSelectedTool] = useState<Tool | null>(null)
+  const [isToolModalOpen, setIsToolModalOpen] = useState(false)
+
+  const handleToolClick = (tool: Tool) => {
+    setSelectedTool(tool)
+    setIsToolModalOpen(true)
+  }
+
+  const handleCloseToolModal = () => {
+    setIsToolModalOpen(false)
+    setSelectedTool(null)
+  }
 
   return (
     <div className={styles.container}>
@@ -72,12 +85,20 @@ export default function ScenarioDetail({ data }: ScenarioDetailProps) {
         <p className={styles.toolsReasoning}>{data.reasoning}</p>
         <div className={styles.toolChips}>
           {data.tools.map((tool) => (
-            <span key={tool.id} className={styles.toolChip}>
+            <button
+              key={tool.id}
+              className={styles.toolChip}
+              onClick={() => handleToolClick(tool)}
+            >
               {tool.name}
-            </span>
+            </button>
           ))}
         </div>
       </div>
+
+      {isToolModalOpen && selectedTool && (
+        <ToolModal tool={selectedTool} onClose={handleCloseToolModal} />
+      )}
     </div>
   )
 }

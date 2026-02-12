@@ -16,6 +16,10 @@ const SCENARIOS = [
   { id: "uber", label: "Uber", icon: "🚗" },
   { id: "bitly", label: "URL Shortener", icon: "🔗" },
   { id: "dropbox", label: "Dropbox", icon: "📦" },
+  { id: "ratelimiter", label: "Rate Limiter", icon: "🚦" },
+  { id: "whatsapp", label: "WhatsApp", icon: "📱" },
+  { id: "youtube", label: "YouTube", icon: "▶️" },
+  { id: "ticketmaster", label: "TicketMaster", icon: "🎟️" },
 ];
 
 export default function ScenarioPrompts() {

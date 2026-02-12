@@ -4,14 +4,34 @@ A local FastAPI + Next.js application for quick reference during system design i
 
 ## Features
 
+### Core Features
 - 🔍 **Full-text search** across technologies and use cases
 - 🏷️ **Smart filtering** by category, CAP leaning, and consistency model
 - ⌨️ **Keyboard shortcuts** for lightning-fast navigation
 - 🎯 **Interview mode** for concise talking points
 - 📚 **Deep study mode** with failure modes, tuning gotchas, and more
-- 💡 **Scenario prompts** for common system design patterns (Payments, Chat, Feed, etc.)
 - ⭐ **Favorites** to pin your most-used tools
 - 📋 **Copy answer skeleton** for quick interview prep
+
+### NEW: Reference Library (Based on Hello Interview)
+- 📊 **Numbers to Know** - Essential latency, throughput, capacity, and availability metrics
+- 🎯 **Delivery Framework** - Structured 4-phase interview approach with time allocation
+- 📋 **Assessment Rubric** - Understand how interviewers evaluate candidates (4 competencies)
+- 🔧 **Common Patterns** - 7 critical patterns (Real-Time Updates, Contention, Multi-Step Processes, Scaling Reads/Writes, Large Blobs, Long-Running Tasks)
+
+### NEW: Extended Scenario Coverage
+- 💳 **Payments** - Strong consistency, idempotency, two-phase commit
+- 💬 **Chat** - Real-time messaging with WebSockets
+- 📰 **Feed** - Hybrid fan-out, caching strategies
+- 📊 **Analytics** - Lambda architecture, streaming analytics
+- 🔍 **Search** - Full-text search with OpenSearch
+- 🔐 **Auth** - JWT tokens, RBAC, session management
+- 🚗 **Uber** - Geospatial matching, real-time location tracking
+- 🔗 **Bit.ly** - URL shortening with high read-to-write ratio
+- 📦 **Dropbox** - Large file uploads, chunking, presigned URLs
+- 🚦 **Rate Limiter** (NEW) - Distributed rate limiting with Redis
+- 📱 **WhatsApp** (NEW) - Real-time messaging at scale, offline delivery
+- ▶️ **YouTube** (NEW) - Video transcoding, adaptive streaming, CDN
 
 ## Prerequisites
 
@@ -152,12 +172,58 @@ Toggle between modes with `Cmd/Ctrl + I` or the mode switcher in the header.
 
 Click **💡 Scenarios** in the header to see pre-configured technology stacks for common interview scenarios:
 
-- **Payments**: DynamoDB, PostgreSQL, SQS, Lambda, Redis
-- **Chat**: DynamoDB, ElastiCache, Kinesis, Lambda, CloudFront
-- **Feed**: DynamoDB, ElastiCache, S3, CloudFront, Lambda
-- **Analytics**: S3, Athena, Redshift, Kinesis, Lambda
-- **Search**: OpenSearch, DynamoDB, CloudFront, Lambda
-- **Auth**: Cognito, DynamoDB, ElastiCache, Lambda, CloudFront
+#### Infrastructure Patterns
+- **Payments**: DynamoDB, PostgreSQL, SQS, Lambda, Redis - Strong consistency, idempotency
+- **Chat**: DynamoDB, ElastiCache, Kinesis, Lambda, CloudFront - Real-time messaging
+- **Feed**: DynamoDB, ElastiCache, S3, CloudFront, Lambda - Hybrid fan-out
+- **Analytics**: S3, Athena, Redshift, Kinesis, Lambda - Lambda architecture
+- **Search**: OpenSearch, DynamoDB, CloudFront, Lambda - Full-text search
+- **Auth**: Cognito, DynamoDB, ElastiCache, Lambda, CloudFront - JWT + RBAC
+
+#### Real Systems
+- **Uber**: PostgreSQL, Redis, SQS, Lambda, Step Functions - Geospatial matching
+- **Bit.ly**: PostgreSQL, Redis, CloudFront, Lambda - URL shortening at scale
+- **Dropbox**: S3, DynamoDB, CloudFront, Lambda - Large file handling
+- **Rate Limiter** (NEW): Redis, DynamoDB, API Gateway - Distributed rate limiting
+- **WhatsApp** (NEW): DynamoDB, Redis, S3, CloudFront, SNS - Messaging at 2B users
+- **YouTube** (NEW): S3, MediaConvert, CloudFront, DynamoDB, Kinesis - Video platform
+
+### Reference Library (NEW!)
+
+Click **📚 Reference** in the header to access essential interview preparation material:
+
+#### 📊 Numbers to Know
+Memorize these critical metrics for credible capacity estimation:
+- **Latency**: L1 cache (0.5ns), RAM (100ns), SSD (150μs), Network cross-region (40-150ms)
+- **Throughput**: Memory (10 GB/s), SSD (500 MB/s), 10 Gbps network (1.25 GB/s)
+- **Capacity**: QPS per server (10K-50K), Redis ops (100K+), WebSocket connections (10K-100K)
+- **Availability**: 99.9% (8.77h downtime/year), 99.99% (52.6min), 99.999% (5.26min)
+
+#### 🎯 Delivery Framework
+Structured approach to nail the interview in 45 minutes:
+1. **Requirements Gathering** (5-10 min) - Clarify functional/non-functional requirements
+2. **High-Level Design** (10-15 min) - Draw system diagram, explain component interactions
+3. **Deep Dives** (15-20 min) - Focus on 2-3 critical areas (schema, scaling, caching, failures)
+4. **Wrap-Up** (5 min) - Summarize, discuss alternatives, address concerns
+
+#### 📋 Assessment Rubric
+Understand how interviewers evaluate you across 4 competencies:
+- **Problem Navigation** (30%) - Breaking down ambiguous problems, prioritizing correctly
+- **Solution Design** (30%) - Well-structured, scalable architectures
+- **Technical Excellence** (25%) - Knowledge of technologies, patterns, trade-offs
+- **Communication & Collaboration** (15%) - Clear explanations, working with interviewer
+
+Includes level expectations (Mid-Level, Senior, Staff+) and red/green flags.
+
+#### 🔧 Common Patterns
+Master these 7 patterns that appear in almost every system design interview:
+1. **Real-Time Updates** - WebSockets, SSE, Long Polling comparison
+2. **Dealing with Contention** - Optimistic/pessimistic locking, distributed locks, queues
+3. **Multi-Step Processes** - Sagas (choreography vs orchestration), 2PC, Outbox pattern
+4. **Scaling Reads** - Caching layers, read replicas, CDN, materialized views
+5. **Scaling Writes** - Sharding, WAL, async queues, batch writes, time-series DBs
+6. **Handling Large Blobs** - Presigned URLs, multipart upload, CDN, compression, streaming
+7. **Managing Long-Running Tasks** - Job queues, workflow orchestration, status tracking
 
 ### Favorites
 
@@ -299,14 +365,27 @@ For actual interview use:
 - **Frontend**: Next.js 14, React 18, TypeScript
 - **Styling**: CSS Modules with CSS custom properties
 
+## What's New (Inspired by Hello Interview)
+
+This version includes major improvements based on the comprehensive [Hello Interview System Design Guide](https://www.hellointerview.com/learn/system-design/in-a-hurry/introduction):
+
+✅ **Numbers to Know** - Critical metrics for capacity estimation (latency, throughput, availability)  
+✅ **Delivery Framework** - 4-phase structured interview approach with time allocation  
+✅ **Assessment Rubric** - Understand interviewer evaluation criteria across 4 competencies  
+✅ **Common Patterns** - 7 essential patterns (real-time updates, contention, scaling reads/writes, etc.)  
+✅ **3 New Scenarios** - Rate Limiter, WhatsApp, YouTube (brings total to 12 scenarios)
+
+These additions ensure you have both **tactical knowledge** (tools, technologies) and **strategic preparation** (interview structure, assessment criteria, common patterns).
+
 ## Future Enhancements
 
 - [ ] Semantic search with embeddings
-- [ ] "Quiz me" mode for practice
+- [ ] "Quiz me" mode for practice (random scenario + timer + self-assessment checklist)
 - [ ] Export favorites as markdown
 - [ ] Dark mode
 - [ ] Mobile responsive improvements
 - [ ] Offline mode with static export
+- [ ] More scenarios from Hello Interview (Ticketmaster, Yelp, News Aggregator, etc.)
 
 ## License
 

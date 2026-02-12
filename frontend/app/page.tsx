@@ -6,6 +6,7 @@ import FilterPanel from '@/components/FilterPanel'
 import ToolList from '@/components/ToolList'
 import ToolDetail from '@/components/ToolDetail'
 import ScenarioPrompts from '@/components/ScenarioPrompts'
+import ReferencePanel from '@/components/ReferencePanel'
 import ModeToggle from '@/components/ModeToggle'
 import { SearchProvider } from '@/contexts/SearchContext'
 import { Tool } from '@/lib/api'
@@ -30,6 +31,7 @@ export default function Home() {
       <header className="app-header">
         <h1>System Design Reference</h1>
         <div className="header-controls">
+          <ReferencePanel />
           <ScenarioPrompts />
           <ModeToggle 
             interviewMode={interviewMode} 

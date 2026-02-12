@@ -1395,5 +1395,776 @@ SCENARIO_BLUEPRINTS = {
         },
         "tools": ["Amazon S3", "Amazon DynamoDB", "Amazon CloudFront", "AWS Lambda", "Amazon API Gateway"],
         "reasoning": "Blob storage for files, metadata storage, CDN for fast downloads, presigned URLs for direct upload/download"
+    },
+
+    "ratelimiter": {
+        "title": "Rate Limiter",
+        "description": "A distributed rate limiting service that prevents abuse by limiting the number of requests a client can make within a time window. Essential infrastructure component for API protection.",
+        "requirements": {
+            "functional": [
+                "Limit requests per user/IP per time window (e.g., 1000 req/min)",
+                "Support different rate limit rules per API endpoint",
+                "Return clear error messages when limit exceeded (HTTP 429)",
+                "Support both user-based and IP-based rate limiting",
+                "Allow whitelisting for trusted clients"
+            ],
+            "non_functional": [
+                "Low latency: rate limit check must complete in <10ms",
+                "High availability: rate limiter downtime should not block all traffic",
+                "Distributed: work across multiple application servers",
+                "Accuracy: small deviation acceptable (e.g., 1005 requests vs 1000 limit OK)",
+                "Scalability: handle 100K+ requests per second"
+            ],
+            "out_of_scope": [
+                "Dynamic rate limit adjustment based on server load",
+                "Per-method rate limiting (GET vs POST)",
+                "Quota management (monthly limits)",
+                "Billing and monetization"
+            ]
+        },
+        "core_entities": [
+            {
+                "name": "RateLimitRule",
+                "fields": ["id (PK)", "endpoint", "limit", "window_seconds", "key_type: user|ip", "created_at"]
+            },
+            {
+                "name": "RequestCounter",
+                "fields": ["key (user_id or IP)", "endpoint", "count", "window_start", "TTL"]
+            },
+            {
+                "name": "Whitelist",
+                "fields": ["client_id (PK)", "reason", "created_at"]
+            }
+        ],
+        "api": [
+            {
+                "method": "POST",
+                "path": "/check",
+                "description": "Check if request is allowed (internal API called by API Gateway)",
+                "auth": "Internal service auth",
+                "request_body": "{ user_id?, ip_address, endpoint }",
+                "response": "{ allowed: boolean, remaining, reset_at }"
+            },
+            {
+                "method": "GET",
+                "path": "/rules",
+                "description": "List rate limit rules (admin)",
+                "auth": "Admin token",
+                "request_body": None,
+                "response": "[RateLimitRule]"
+            },
+            {
+                "method": "POST",
+                "path": "/rules",
+                "description": "Create new rate limit rule (admin)",
+                "auth": "Admin token",
+                "request_body": "{ endpoint, limit, window_seconds, key_type }",
+                "response": "RateLimitRule"
+            }
+        ],
+        "high_level": {
+            "description": "Client requests hit an API Gateway which calls the Rate Limiter Service before forwarding to backend services. The Rate Limiter uses Redis to store counters with sliding window or fixed window algorithm. Each request increments a counter keyed by user_id (or IP) + endpoint + time window. If counter exceeds limit, return 429 Too Many Requests. Redis atomic operations (INCR, EXPIRE) ensure accuracy even under concurrent load. Rules stored in DynamoDB and cached in Redis. For failover, if Rate Limiter is down, API Gateway can fail open (allow all) or fail closed (reject all) based on configuration.",
+            "components": [
+                "Client - makes API requests",
+                "API Gateway - intercepts requests, calls rate limiter",
+                "Rate Limiter Service - checks limits, updates counters",
+                "Redis Cluster - stores request counters with TTL",
+                "DynamoDB - stores rate limit rules",
+                "CloudWatch - monitors rate limit violations and service health"
+            ],
+            "notes": [
+                "Redis INCR + EXPIRE provides atomic counter with auto-expiry",
+                "Sliding window log more accurate but higher memory cost",
+                "Fixed window simpler but allows burst at window boundaries",
+                "Distributed rate limiting: Redis cluster with consistent hashing",
+                "Fail-open vs fail-closed trade-off: availability vs security"
+            ]
+        },
+        "deep_dive": {
+            "flows": [
+                {
+                    "name": "Fixed Window Rate Limiting",
+                    "steps": [
+                        "Client sends request to API Gateway",
+                        "API Gateway extracts user_id (from JWT) or IP address",
+                        "API Gateway calls POST /check on Rate Limiter Service",
+                        "Rate Limiter constructs key: 'ratelimit:{user_id}:{endpoint}:{window_start_timestamp}'",
+                        "Rate Limiter executes Redis INCR on key",
+                        "If counter == 1 (new window): SET TTL to window duration",
+                        "If counter <= limit: return { allowed: true, remaining: limit - counter }",
+                        "If counter > limit: return { allowed: false, remaining: 0, reset_at: window_end }",
+                        "API Gateway returns 429 if not allowed, else forwards to backend"
+                    ]
+                },
+                {
+                    "name": "Sliding Window Log (More Accurate)",
+                    "steps": [
+                        "Use Redis Sorted Set (ZSET) with timestamps as scores",
+                        "Key: 'ratelimit:{user_id}:{endpoint}'",
+                        "On request: ZADD current_timestamp to set",
+                        "ZREMRANGEBYSCORE to remove entries older than window",
+                        "ZCARD to count entries in current window",
+                        "If count <= limit: allow request",
+                        "EXPIRE key with TTL = window duration"
+                    ]
+                },
+                {
+                    "name": "Rule Lookup and Caching",
+                    "steps": [
+                        "On Rate Limiter startup: load all rules from DynamoDB into memory",
+                        "Cache rules in Redis with 5-minute TTL",
+                        "On /check request: lookup rule from Redis cache (O(1))",
+                        "If cache miss: fetch from DynamoDB, populate Redis",
+                        "Admin creates/updates rules via POST /rules: write to DynamoDB, invalidate Redis cache"
+                    ]
+                }
+            ],
+            "caching": "Redis stores request counters (keys with TTL = window duration). Rate limit rules cached in Redis with 5min TTL. DynamoDB is source of truth for rules.",
+            "scaling": "Rate Limiter Service scales horizontally (stateless). Redis Cluster with sharding by key (user_id or IP) handles high throughput. Each shard handles ~100K ops/sec. API Gateway can cache recent limit checks locally (1-5s TTL) to reduce Rate Limiter load.",
+            "notes": [
+                "Fixed window: Simple but allows 2x burst at window boundary (1000 req at 12:59:59, 1000 req at 13:00:00)",
+                "Sliding window log: Accurate but uses more memory (stores all timestamps)",
+                "Token bucket: Allows controlled bursts, more complex to implement",
+                "Sliding window counter: Hybrid approach, good balance of accuracy and memory",
+                "Redis Cluster: Partition counters across shards using consistent hashing on key",
+                "Whitelist check: Separate Redis SET for whitelisted client_ids, check before rate limit logic",
+                "Graceful degradation: If Redis is down, fallback to local in-memory counters (per-instance limits)",
+                "Monitoring: Alert on high 429 rates (potential DDoS or legitimate traffic spike)"
+            ]
+        },
+        "tools": ["Amazon ElastiCache (Redis/Valkey)", "Amazon DynamoDB", "Amazon API Gateway", "AWS Lambda", "Amazon CloudWatch"],
+        "reasoning": "Low-latency counters, atomic operations, TTL support, high throughput"
+    },
+
+    "whatsapp": {
+        "title": "WhatsApp Messaging Platform",
+        "description": "A real-time messaging platform supporting 1:1 and group chats with end-to-end encryption, media sharing, and read receipts. Focus on reliability, low latency, and offline message delivery.",
+        "requirements": {
+            "functional": [
+                "Send and receive text messages in real-time (1:1 and group)",
+                "Support media messages (images, videos, documents)",
+                "Message delivery status (sent, delivered, read)",
+                "Online/offline presence indicators",
+                "Group chats with up to 256 participants",
+                "Message history persists on server (not client-only)"
+            ],
+            "non_functional": [
+                "Sub-100ms message delivery latency for online users",
+                "Messages must be delivered exactly once (no duplicates)",
+                "High availability: 99.99% uptime",
+                "Support 2 billion users, 100 billion messages per day",
+                "Messages encrypted end-to-end (out of scope for interview but mention)",
+                "Offline message delivery: queue messages for offline users"
+            ],
+            "out_of_scope": [
+                "End-to-end encryption implementation details",
+                "Voice and video calling",
+                "Stories / Status features",
+                "Payment integration",
+                "Bot framework"
+            ]
+        },
+        "core_entities": [
+            {
+                "name": "User",
+                "fields": ["id (PK)", "phone_number (unique)", "display_name", "profile_picture_url", "last_seen_at", "created_at"]
+            },
+            {
+                "name": "Conversation",
+                "fields": ["id (PK)", "type: direct|group", "name?", "created_by", "created_at", "updated_at"]
+            },
+            {
+                "name": "Participant",
+                "fields": ["conversation_id (PK)", "user_id (SK)", "joined_at", "last_read_message_id", "role: admin|member"]
+            },
+            {
+                "name": "Message",
+                "fields": ["id (PK)", "conversation_id (partition key)", "sender_id", "content", "media_url?", "status: sent|delivered|read", "created_at (sort key)", "is_deleted"]
+            },
+            {
+                "name": "MessageQueue",
+                "fields": ["user_id (PK)", "message_id (SK)", "conversation_id", "queued_at", "TTL: 30 days"]
+            }
+        ],
+        "api": [
+            {
+                "method": "POST",
+                "path": "/conversations",
+                "description": "Create new conversation (1:1 or group)",
+                "auth": "JWT token",
+                "request_body": "{ participant_ids, type, name? }",
+                "response": "Conversation"
+            },
+            {
+                "method": "POST",
+                "path": "/messages",
+                "description": "Send a message",
+                "auth": "JWT token",
+                "request_body": "{ conversation_id, content, media_url? }",
+                "response": "Message"
+            },
+            {
+                "method": "GET",
+                "path": "/conversations/{id}/messages",
+                "description": "Fetch message history with pagination",
+                "auth": "JWT token",
+                "request_body": None,
+                "response": "{ messages: Message[], cursor, has_more }"
+            },
+            {
+                "method": "WS",
+                "path": "/ws",
+                "description": "WebSocket for real-time messaging and presence",
+                "auth": "JWT token",
+                "request_body": "Bidirectional frames",
+                "response": "Real-time events"
+            },
+            {
+                "method": "PUT",
+                "path": "/conversations/{id}/read",
+                "description": "Mark messages as read",
+                "auth": "JWT token",
+                "request_body": "{ last_read_message_id }",
+                "response": "200 OK"
+            }
+        ],
+        "high_level": {
+            "description": "Clients connect via WebSocket through a Message Gateway (API Gateway WebSocket or custom). The Messaging Service handles message routing, persistence, and delivery. Messages are stored in DynamoDB partitioned by conversation_id with created_at as sort key. For online users, messages are pushed immediately via WebSocket. For offline users, messages are queued in a MessageQueue table (partition by user_id) and delivered when they reconnect. Redis stores presence state (online/offline) and acts as pub/sub for cross-node message routing. Media files are uploaded to S3 with presigned URLs, links shared in message content. SNS/FCM sends push notifications to offline users. Cassandra or DynamoDB can be used for message storage at WhatsApp scale.",
+            "components": [
+                "Client (mobile app) - iOS/Android with persistent WebSocket",
+                "Message Gateway - WebSocket manager, connection registry",
+                "Messaging Service - message routing, persistence, delivery logic",
+                "Presence Service - tracks online/offline state in Redis",
+                "DynamoDB / Cassandra - message and conversation storage",
+                "Redis Cluster - presence state, pub/sub for message routing",
+                "S3 + CloudFront - media file storage and delivery",
+                "SNS/FCM - push notifications for offline users",
+                "SQS - async processing queues for message delivery"
+            ],
+            "notes": [
+                "WebSocket connections are stateful: need pub/sub for cross-node routing",
+                "Message ordering guaranteed within conversation via sort key (timestamp)",
+                "Offline message delivery: MessageQueue table with 30-day TTL",
+                "Read receipts: update last_read_message_id in Participant table",
+                "Group messages: fan-out write to all participants (up to 256)"
+            ]
+        },
+        "deep_dive": {
+            "flows": [
+                {
+                    "name": "Send Message (1:1 Chat)",
+                    "steps": [
+                        "Sender client sends message via WebSocket frame",
+                        "Message Gateway validates auth, forwards to Messaging Service",
+                        "Messaging Service generates message_id, writes to DynamoDB (conversation_id partition)",
+                        "Messaging Service checks Redis for recipient presence",
+                        "If recipient online: publish message to Redis pub/sub channel for their connection",
+                        "Message Gateway node with recipient's connection receives pub/sub event, pushes via WebSocket",
+                        "If recipient offline: write to MessageQueue table (user_id partition), send push notification via SNS",
+                        "Update message status to 'delivered' when recipient receives it",
+                        "Return acknowledgment to sender"
+                    ]
+                },
+                {
+                    "name": "Send Message (Group Chat)",
+                    "steps": [
+                        "Sender sends message to group conversation_id",
+                        "Messaging Service writes message once to DynamoDB",
+                        "Messaging Service queries Participant table for all group members (up to 256)",
+                        "For each participant: check presence in Redis",
+                        "For online participants: publish to their pub/sub channels",
+                        "For offline participants: write to MessageQueue + send push notification",
+                        "Each recipient receives message, sends read receipt independently"
+                    ]
+                },
+                {
+                    "name": "Offline Message Delivery",
+                    "steps": [
+                        "User reconnects, WebSocket handshake includes JWT",
+                        "Message Gateway updates presence in Redis (SET user:{id}:online TTL 30s)",
+                        "Messaging Service queries MessageQueue for user_id",
+                        "Fetch all queued messages (up to 1000 at a time)",
+                        "Push messages to user via WebSocket in chronological order",
+                        "Delete delivered messages from MessageQueue",
+                        "If >1000 queued: paginate delivery"
+                    ]
+                },
+                {
+                    "name": "Media Message Flow",
+                    "steps": [
+                        "Sender requests presigned S3 URL from Messaging Service",
+                        "Sender uploads media directly to S3 using presigned URL",
+                        "S3 returns object URL after successful upload",
+                        "Sender sends text message with media_url field",
+                        "Messaging Service stores message with media_url in DynamoDB",
+                        "Recipients download media from S3 (or CloudFront CDN) when viewing message"
+                    ]
+                }
+            ],
+            "caching": "Redis stores presence state (SET with TTL 30s, refreshed by heartbeats). Redis pub/sub for cross-node message routing. No caching of messages (always fetch from DynamoDB for history). CloudFront caches media files at edge.",
+            "scaling": "Message Gateway scales horizontally with Redis pub/sub for cross-node routing. Messaging Service is stateless and scales horizontally. DynamoDB auto-scales with on-demand capacity or partitions by conversation_id. Redis Cluster with sharding for presence data. S3 scales infinitely for media storage. Group messages: fan-out on write (acceptable for 256 participants, vs 1B followers).",
+            "notes": [
+                "Message deduplication: Use idempotency key (client-generated UUID) to prevent double delivery",
+                "Message ordering: DynamoDB sort key on created_at (timestamp + message_id for ties)",
+                "Presence heartbeats: Client sends ping every 15s, server refreshes Redis TTL",
+                "Graceful WebSocket disconnect: On disconnect, Redis key expires after 30s (delayed offline status)",
+                "Push notifications: Only send if user hasn't opened app in 5+ minutes (avoid spam)",
+                "Group message optimization: Write once to DynamoDB, fan-out delivery to participants",
+                "Read receipts: Avoid thundering herd by batching updates (e.g., update every 5 messages)",
+                "Media compression: Client compresses images before upload to save bandwidth",
+                "Offline message TTL: 30 days in MessageQueue, then moved to cold storage (Glacier)"
+            ]
+        },
+        "tools": ["Amazon DynamoDB", "Amazon ElastiCache (Redis/Valkey)", "Amazon S3", "Amazon CloudFront", "Amazon SNS"],
+        "reasoning": "Real-time messaging, presence tracking, media storage, push notifications, offline message queuing"
+    },
+
+    "youtube": {
+        "title": "YouTube Video Platform",
+        "description": "A video sharing platform that allows users to upload, transcode, store, and stream videos to millions of viewers. Supports recommendations, comments, and analytics.",
+        "requirements": {
+            "functional": [
+                "Users can upload videos (up to 12 hours, 256GB max)",
+                "Videos are transcoded to multiple resolutions (4K, 1080p, 720p, 480p, 360p)",
+                "Users can search and discover videos",
+                "Users can watch videos with adaptive bitrate streaming",
+                "Users can like, comment, and subscribe to channels",
+                "View count and analytics tracking"
+            ],
+            "non_functional": [
+                "Support 500 hours of video uploaded per minute (global)",
+                "Support 1 billion hours of video watched per day",
+                "Video playback must start within 2 seconds (buffering)",
+                "High availability for video streaming (99.9%)",
+                "Cost-efficient storage (petabytes of video)",
+                "Global CDN delivery for low latency worldwide"
+            ],
+            "out_of_scope": [
+                "Live streaming",
+                "YouTube Premium subscriptions",
+                "Ad serving and monetization",
+                "Content moderation and copyright detection",
+                "Recommendation algorithm details"
+            ]
+        },
+        "core_entities": [
+            {
+                "name": "User",
+                "fields": ["id (PK)", "username (unique)", "email", "profile_picture_url", "subscriber_count", "created_at"]
+            },
+            {
+                "name": "Video",
+                "fields": ["id (PK)", "uploader_id (index)", "title", "description", "thumbnail_url", "duration_seconds", "view_count", "like_count", "status: processing|ready|failed", "upload_date", "category"]
+            },
+            {
+                "name": "VideoAsset",
+                "fields": ["video_id (PK)", "resolution (SK): 4K|1080p|720p|480p|360p", "format: HLS|DASH", "s3_key", "file_size_bytes", "bitrate"]
+            },
+            {
+                "name": "Comment",
+                "fields": ["id (PK)", "video_id (index)", "user_id", "content", "like_count", "created_at", "parent_comment_id?"]
+            },
+            {
+                "name": "Subscription",
+                "fields": ["subscriber_id (PK)", "channel_id (SK)", "subscribed_at"]
+            }
+        ],
+        "api": [
+            {
+                "method": "POST",
+                "path": "/videos",
+                "description": "Initiate video upload",
+                "auth": "JWT token",
+                "request_body": "{ title, description, file_size, duration }",
+                "response": "{ video_id, upload_url (presigned S3) }"
+            },
+            {
+                "method": "GET",
+                "path": "/videos/{id}",
+                "description": "Get video metadata and streaming URLs",
+                "auth": "Optional JWT token",
+                "request_body": None,
+                "response": "{ video, streaming_urls: { 4K: url, 1080p: url, ... } }"
+            },
+            {
+                "method": "GET",
+                "path": "/videos/search?q={query}",
+                "description": "Search videos by title, description, tags",
+                "auth": "Optional JWT token",
+                "request_body": None,
+                "response": "{ videos: Video[], total, page }"
+            },
+            {
+                "method": "POST",
+                "path": "/videos/{id}/view",
+                "description": "Increment view count (after 30s watch time)",
+                "auth": "Optional JWT token",
+                "request_body": None,
+                "response": "200 OK"
+            },
+            {
+                "method": "POST",
+                "path": "/videos/{id}/like",
+                "description": "Like a video",
+                "auth": "JWT token",
+                "request_body": None,
+                "response": "200 OK"
+            }
+        ],
+        "high_level": {
+            "description": "Users upload videos via presigned S3 URLs directly to S3 (raw format). An S3 event triggers a Lambda that starts a transcoding job using AWS Elemental MediaConvert. MediaConvert transcodes the video into multiple resolutions and formats (HLS for adaptive bitrate streaming). Transcoded videos are stored back in S3 and served via CloudFront CDN globally. Video metadata is stored in DynamoDB. Search is powered by OpenSearch indexing video titles, descriptions, and tags. View counts and analytics are streamed to Kinesis for real-time processing and aggregation. Comments and likes are stored in DynamoDB. Redis caches popular video metadata and trending lists.",
+            "components": [
+                "Client (web/mobile) - video upload/playback",
+                "API Gateway - authentication, rate limiting",
+                "Video Service - metadata management, search, analytics",
+                "S3 (Source Bucket) - raw uploaded videos",
+                "Lambda - triggered by S3 events, starts transcoding jobs",
+                "AWS Elemental MediaConvert - video transcoding service",
+                "S3 (Streaming Bucket) - transcoded videos in HLS/DASH format",
+                "CloudFront CDN - global video delivery",
+                "DynamoDB - video metadata, comments, likes, subscriptions",
+                "OpenSearch - full-text search for videos",
+                "Kinesis Data Streams - real-time view count and analytics ingestion",
+                "Redis - caching trending videos, popular metadata"
+            ],
+            "notes": [
+                "Transcoding is expensive and slow: offload to dedicated service (MediaConvert)",
+                "HLS (HTTP Live Streaming): splits video into chunks, enables adaptive bitrate",
+                "CloudFront caches video chunks at edge locations worldwide",
+                "View count: async processing to avoid slowing down video playback",
+                "Storage optimization: Delete raw videos after transcoding (optional, for cost savings)"
+            ]
+        },
+        "deep_dive": {
+            "flows": [
+                {
+                    "name": "Video Upload and Transcoding",
+                    "steps": [
+                        "User selects video file in client app (up to 256GB)",
+                        "Client calls POST /videos with metadata (title, description, file_size)",
+                        "Video Service creates Video record in DynamoDB (status=processing)",
+                        "Video Service generates presigned S3 URL for source bucket (15min expiry)",
+                        "Client uploads video directly to S3 using presigned URL (multipart upload for large files)",
+                        "S3 triggers Lambda on ObjectCreated event",
+                        "Lambda starts MediaConvert job with presets (4K, 1080p, 720p, 480p, 360p)",
+                        "MediaConvert transcodes video in parallel to all resolutions",
+                        "Transcoded outputs written to S3 streaming bucket in HLS format",
+                        "MediaConvert job completion triggers Lambda",
+                        "Lambda updates Video status=ready, writes VideoAsset records for each resolution",
+                        "Lambda invalidates CloudFront cache for this video (optional)",
+                        "User is notified that video is ready (push notification or email)"
+                    ]
+                },
+                {
+                    "name": "Video Playback",
+                    "steps": [
+                        "User searches for video or clicks from recommendation",
+                        "Client calls GET /videos/{id}",
+                        "Video Service fetches metadata from DynamoDB (cached in Redis if popular)",
+                        "Video Service returns metadata + CloudFront URLs for all available resolutions",
+                        "Client video player starts with lowest resolution (360p) for fast startup",
+                        "Client downloads HLS manifest file (.m3u8) from CloudFront",
+                        "Client starts downloading video chunks from CloudFront",
+                        "Player measures bandwidth, switches to higher resolution if sufficient (adaptive bitrate)",
+                        "After 30 seconds of watch time: Client calls POST /videos/{id}/view",
+                        "Video Service publishes view event to Kinesis stream",
+                        "Lambda consumer increments view_count in DynamoDB (batched updates)"
+                    ]
+                },
+                {
+                    "name": "Video Search",
+                    "steps": [
+                        "User types search query in search bar",
+                        "Client calls GET /videos/search?q=react+tutorial",
+                        "Video Service queries OpenSearch with query + filters (category, upload date, duration)",
+                        "OpenSearch returns ranked results using BM25 scoring",
+                        "Video Service enriches results with metadata from DynamoDB (view counts, thumbnails)",
+                        "Results cached in Redis for 1 minute (popular queries)",
+                        "Return paginated results to client"
+                    ]
+                },
+                {
+                    "name": "View Count Analytics Pipeline",
+                    "steps": [
+                        "Client sends POST /videos/{id}/view after 30s watch time",
+                        "Video Service publishes event to Kinesis: { video_id, user_id?, timestamp }",
+                        "Lambda consumer reads Kinesis stream in batches (1000 events)",
+                        "Lambda aggregates view counts per video in-memory",
+                        "Lambda batch-writes updates to DynamoDB every 10 seconds (reduce write cost)",
+                        "Separate Kinesis consumer writes raw events to S3 for long-term analytics (Athena queries)"
+                    ]
+                }
+            ],
+            "caching": "CloudFront caches video chunks at edge locations with long TTL (24 hours). Redis caches popular video metadata (5min TTL), trending video lists (1min TTL), and search results for common queries (1min TTL). DynamoDB DAX caches hot reads for view counts and likes.",
+            "scaling": "Video Service scales horizontally (stateless). S3 scales infinitely for storage. MediaConvert auto-scales transcoding jobs. CloudFront distributes video delivery load globally. DynamoDB auto-scales with on-demand capacity. OpenSearch cluster scales with data nodes and replicas. Kinesis scales with shard splitting for analytics ingestion. Redis cluster with sharding for caching.",
+            "notes": [
+                "HLS adaptive bitrate: Player switches resolution based on network speed, ensuring smooth playback",
+                "Transcoding presets: 4K (3840x2160, 20Mbps), 1080p (1920x1080, 8Mbps), 720p (1280x720, 5Mbps), 480p (2.5Mbps), 360p (1Mbps)",
+                "Chunk size: 6-10 seconds per HLS chunk for optimal buffering and seeking",
+                "Storage cost optimization: Use S3 Intelligent-Tiering to move infrequently accessed videos to cheaper tiers",
+                "Thumbnail generation: MediaConvert generates thumbnails at specific timestamps (e.g., 5 seconds into video)",
+                "View count accuracy: Batch updates mean count may lag by 10-30 seconds (acceptable trade-off for cost)",
+                "Duplicate view prevention: Track user_id + video_id in Redis (TTL 24h) to count max 1 view per day",
+                "CDN cache invalidation: Only invalidate on video re-upload or deletion (rare)",
+                "Compression: Use H.264 codec for broad compatibility, H.265/HEVC for 4K (better compression)",
+                "Cold start optimization: Pre-warm CloudFront cache for trending videos by preloading chunks"
+            ]
+        },
+        "tools": ["Amazon S3", "AWS Elemental MediaConvert", "Amazon CloudFront", "Amazon DynamoDB", "Amazon Kinesis Data Streams"],
+        "reasoning": "Blob storage for videos, transcoding service, global CDN delivery, metadata storage, real-time analytics ingestion"
+    },
+    "ticketmaster": {
+        "title": "Ticketmaster (Event Ticketing Platform)",
+        "description": "An online platform that allows users to purchase tickets for concerts, sports events, theater, and other live entertainment. Must handle high-contention scenarios where millions of users compete for limited inventory during popular event sales.",
+        "requirements": {
+            "functional": [
+                "Users should be able to view events with seat maps and availability",
+                "Users should be able to search for events by keywords, location, date, performer, and category",
+                "Users should be able to book tickets to events without double booking",
+                "System should reserve tickets during checkout to prevent frustrating UX",
+                "System should release reserved tickets if checkout is abandoned or times out"
+            ],
+            "non_functional": [
+                "Prioritize availability for searching & viewing events (AP in CAP theorem)",
+                "Prioritize consistency for booking events (CP in CAP theorem - no double booking)",
+                "Scalable to handle high throughput: 10 million users for popular events",
+                "Low latency search: <500ms response time",
+                "Read-heavy system: 100:1 read-to-write ratio",
+                "Handle high-contention scenarios: thousands of users competing for same seats"
+            ],
+            "out_of_scope": [
+                "Users viewing their booked events history",
+                "Admins or event coordinators adding events",
+                "Dynamic pricing based on demand",
+                "GDPR compliance and user data protection",
+                "Payment fraud detection",
+                "Dispute resolution and refunds"
+            ]
+        },
+        "core_entities": [
+            {
+                "name": "Event",
+                "fields": ["id (PK)", "title", "description", "date", "category", "performerId (FK)", "venueId (FK)", "status: draft|published|cancelled", "createdAt"]
+            },
+            {
+                "name": "Performer",
+                "fields": ["id (PK)", "name", "type: artist|team|company", "description", "imageUrl"]
+            },
+            {
+                "name": "Venue",
+                "fields": ["id (PK)", "name", "address", "city", "state", "country", "capacity", "seatMapData (JSON)"]
+            },
+            {
+                "name": "Ticket",
+                "fields": ["id (PK)", "eventId (index)", "section", "row", "seatNumber", "price", "status: available|reserved|sold", "bookingId (nullable FK)", "reservedUntil (nullable timestamp)"]
+            },
+            {
+                "name": "Booking",
+                "fields": ["id (PK)", "userId (index)", "eventId (index)", "ticketIds (array)", "totalPrice", "status: in_progress|confirmed|cancelled", "createdAt", "expiresAt"]
+            },
+            {
+                "name": "User",
+                "fields": ["id (PK)", "email (unique)", "name", "createdAt"]
+            }
+        ],
+        "api": [
+            {
+                "method": "GET",
+                "path": "/events/:eventId",
+                "description": "View event details including seat map and availability",
+                "auth": "Optional JWT",
+                "request_body": None,
+                "response": "{ event: Event, venue: Venue, performer: Performer, tickets: Ticket[] }"
+            },
+            {
+                "method": "GET",
+                "path": "/events/search",
+                "description": "Search events with filters",
+                "auth": "Optional JWT",
+                "request_body": None,
+                "query_params": "keyword, start_date, end_date, location, category, performer, pageSize, page",
+                "response": "{ events: Event[], total, hasMore }"
+            },
+            {
+                "method": "POST",
+                "path": "/bookings",
+                "description": "Reserve tickets (creates booking, locks tickets for 10min)",
+                "auth": "JWT token",
+                "request_body": "{ eventId, ticketIds: string[] }",
+                "response": "{ bookingId, expiresAt, tickets: Ticket[] }"
+            },
+            {
+                "method": "POST",
+                "path": "/bookings/:bookingId/confirm",
+                "description": "Confirm booking after payment processed",
+                "auth": "JWT token",
+                "request_body": "{ paymentIntentId }",
+                "response": "{ booking: Booking, tickets: Ticket[] }"
+            },
+            {
+                "method": "DELETE",
+                "path": "/bookings/:bookingId",
+                "description": "Cancel booking and release tickets",
+                "auth": "JWT token",
+                "request_body": None,
+                "response": "{ success: true }"
+            }
+        ],
+        "high_level": {
+            "description": "Clients connect through CDN to API Gateway (handles authentication, rate limiting, routing). API Gateway routes traffic to three core microservices: Event Service (viewing events), Search Service (Elasticsearch queries), and Booking Service (ticket reservations and confirmations). Event Service connects to PostgreSQL Database (Event, Venue, Performer tables) and Redis (event cache). Search Service queries Elasticsearch (indexed on name, description, venue, performer, date, etc. with node query caching enabled), synced via CDC from Database. Booking Service connects to PostgreSQL (Ticket, Booking tables), Redis (ticket locks with 10min TTL), and Stripe (payments). Virtual waiting queue manages high-demand event traffic.",
+            "components": [
+                "CDN - serves static assets, reduces latency for global users",
+                "API Gateway - authentication, rate limiting, routing to microservices",
+                "Event Service - handles GET /events/:eventId for viewing event details",
+                "Search Service - handles GET /events/search, queries Elasticsearch",
+                "Booking Service - handles POST /bookings (reserve) and POST /bookings/:id/confirm",
+                "PostgreSQL Database - stores Event, Venue, Performer, Ticket, Booking tables",
+                "Redis - Event cache (5min TTL) + Ticket locks (10min TTL with {ticketId:userId})",
+                "Elasticsearch - search index on name, description, venue, performer, date; node query caching enabled",
+                "CDC (Change Data Capture) - syncs PostgreSQL changes to Elasticsearch for search",
+                "Stripe - external payment processor for booking confirmations",
+                "Virtual Waiting Queue - Redis sorted set for managing high-demand event access"
+            ],
+            "notes": [
+                "Read-heavy: 100:1 read/write ratio requires aggressive caching via Redis and CDN",
+                "High contention: Redis distributed locks (SETNX with TTL) prevent double booking",
+                "Ticket reservation: Redis stores {ticketId:userId} with 10min TTL for checkout flow",
+                "Search optimization: Elasticsearch with inverted index for fast keyword search, CDC keeps it in sync",
+                "Virtual waiting queue: Redis sorted set assigns random queue positions for popular events",
+                "Separation of concerns: Event Service (read-only), Search Service (search-optimized), Booking Service (write + consistency)"
+            ]
+        },
+        "deep_dive": {
+            "flows": [
+                {
+                    "name": "View Event with Seat Map",
+                    "steps": [
+                        "Client requests GET /events/:eventId",
+                        "API Gateway authenticates (optional) and forwards to Event Service",
+                        "Event Service checks Redis cache for event data (TTL 5min)",
+                        "On cache miss: Query PostgreSQL read replica for event, venue, performer",
+                        "Query tickets table to build seat availability map",
+                        "Store result in Redis cache",
+                        "Return event details + seat map JSON to client",
+                        "Client renders interactive seat map in browser"
+                    ]
+                },
+                {
+                    "name": "Search Events",
+                    "steps": [
+                        "Client sends GET /events/search?keyword=taylor+swift&location=san+francisco",
+                        "API Gateway forwards to Search Service",
+                        "Search Service checks Redis for cached results (TTL 1min for popular queries)",
+                        "On cache miss: Query Elasticsearch with keyword + location filters",
+                        "Elasticsearch returns ranked results using BM25 scoring (full-text search on name, description, venue, performer, date)",
+                        "Node query caching in Elasticsearch speeds up repeated queries",
+                        "Cache results in Redis (popular queries only)",
+                        "Return paginated results to client"
+                    ]
+                },
+                {
+                    "name": "CDC (Change Data Capture) - Sync Database to Elasticsearch",
+                    "steps": [
+                        "Event organizer creates/updates event in PostgreSQL (via admin panel)",
+                        "PostgreSQL write-ahead log (WAL) captures the change",
+                        "CDC process (Debezium or similar) reads from WAL in real-time",
+                        "CDC transforms database change into Elasticsearch document format",
+                        "CDC publishes update to Elasticsearch index",
+                        "Elasticsearch indexes the new/updated event (milliseconds latency)",
+                        "Search results now include the new event",
+                        "Note: CDC ensures eventual consistency - search index lags by <1 second"
+                    ]
+                },
+                {
+                    "name": "Reserve Tickets (Booking Flow)",
+                    "steps": [
+                        "User selects seats and clicks 'Reserve'",
+                        "Client sends POST /bookings with ticketIds",
+                        "Booking Service starts distributed lock attempt via Redis SETNX for each ticket",
+                        "For each ticket: SET ticket:{id}:lock {bookingId} NX EX 600 (10min TTL)",
+                        "If any lock fails (ticket already reserved): rollback all locks, return error",
+                        "If all locks succeed: Create Booking record (status=in_progress, expiresAt=now+10min)",
+                        "Store booking metadata in Redis with 10min TTL",
+                        "Return bookingId and expiresAt to client",
+                        "Client redirects to payment page with countdown timer"
+                    ]
+                },
+                {
+                    "name": "Complete Booking (Payment Confirmation)",
+                    "steps": [
+                        "User fills payment details on checkout page",
+                        "Client sends payment to Stripe with bookingId in metadata",
+                        "Stripe processes payment, sends webhook to our system",
+                        "Webhook handler retrieves bookingId from Stripe metadata",
+                        "Booking Service starts PostgreSQL transaction:",
+                        "  - Update Booking status to 'confirmed'",
+                        "  - Update all Tickets status to 'sold', set bookingId FK",
+                        "  - Commit transaction (ACID guarantees)",
+                        "Delete Redis locks for tickets (no longer needed)",
+                        "Publish BookingConfirmed event to SQS for email notifications",
+                        "Return success to client"
+                    ]
+                },
+                {
+                    "name": "Abandoned Booking (Automatic Release)",
+                    "steps": [
+                        "User starts checkout but abandons page",
+                        "After 10 minutes: Redis TTL expires, locks automatically deleted",
+                        "Tickets become available for other users instantly",
+                        "Optional: Cron job runs every 1 minute to clean up stale Booking records (status=in_progress, expiresAt < now)",
+                        "No manual intervention needed - self-healing system"
+                    ]
+                },
+                {
+                    "name": "Real-time Seat Availability Updates (Optional Deep Dive)",
+                    "steps": [
+                        "When user views event page, client establishes Server-Sent Events (SSE) connection",
+                        "Booking Service publishes TicketReserved and TicketSold events to Redis Pub/Sub",
+                        "SSE server subscribes to Redis channel for this eventId",
+                        "When ticket status changes: SSE pushes update to all connected clients",
+                        "Client updates seat map in real-time (grey out reserved/sold seats)",
+                        "Alternative: Client polls GET /events/:eventId/availability every 5 seconds",
+                        "Trade-off: SSE reduces wasted clicks, but adds complexity"
+                    ]
+                },
+                {
+                    "name": "Virtual Waiting Room (High-Demand Events)",
+                    "steps": [
+                        "Event organizer enables waiting room for high-demand sale",
+                        "Before sale starts: Users enter waiting room (GET /events/:eventId/waitingroom)",
+                        "System assigns each user a random queue position",
+                        "Queue position stored in Redis sorted set: ZADD waitingroom:{eventId} {randomScore} {userId}",
+                        "When sale begins: System admits users in batches (e.g., 1000 users per minute)",
+                        "Admitted users receive temporary access token (JWT with 15min expiry)",
+                        "Only users with valid token can call POST /bookings",
+                        "Client shows queue position and estimated wait time",
+                        "Prevents server overload from 10M simultaneous requests"
+                    ]
+                }
+            ],
+            "caching": "Redis caches event details (5min TTL), search results for popular queries (1min TTL), and seat availability data. Elasticsearch has node query caching enabled for repeated searches. CDN caches event images (24h TTL), venue seat maps (24h TTL), and static assets globally. Aggressive multi-layer caching required for 100:1 read/write ratio.",
+            "scaling": "Event Service, Search Service, and Booking Service scale horizontally (all stateless microservices). PostgreSQL uses primary for writes + multiple read replicas for read queries (prevents primary overload). Redis cluster with sharding for high-throughput locking and caching. Elasticsearch cluster with multiple data nodes and replicas for search. CDC pipeline scales independently for database change capture. CDN distributes static assets globally. During peak events: auto-scale service instances 10x, add read replicas, increase Redis cluster size.",
+            "notes": [
+                "Double booking prevention: Redis distributed locks with NX (set if not exists) + TTL ensure only one user can reserve a ticket",
+                "Lock timeout: 10 minutes is optimal - long enough for payment, short enough to prevent inventory hoarding",
+                "ACID transactions: PostgreSQL ensures booking confirmation is atomic (all tickets sold or none)",
+                "Isolation level: Use READ COMMITTED or SERIALIZABLE to prevent race conditions",
+                "Search optimization: Elasticsearch inverted index makes keyword search fast. CDC (Change Data Capture) syncs PostgreSQL changes to Elasticsearch in real-time (<1s latency)",
+                "Search caching: Cache popular queries (e.g., 'Taylor Swift Los Angeles') in Redis. Cache key: hash of query params",
+                "High contention: For extremely popular events (Beyoncé, Taylor Swift), use virtual waiting room to throttle demand",
+                "Real-time updates: SSE or WebSockets for live seat map updates. Alternative: client-side polling every 5-10 seconds",
+                "Seat map rendering: Send JSON seat layout to client, render SVG/Canvas in browser (reduces server load)",
+                "Monitoring: Track ticket reservation rate, lock contention, payment success rate, cache hit rate",
+                "Failover: If Redis goes down, fall back to PostgreSQL row-level locking (slower but consistent)",
+                "Testing: Simulate 10M concurrent users with load testing tools (Locust, k6) to validate horizontal scaling",
+                "Database sharding: Shard tickets table by eventId if single DB can't handle write load",
+                "Read replica lag: Stale seat maps acceptable (eventual consistency) but bookings must be strongly consistent",
+                "Payment idempotency: Use Stripe idempotency keys to prevent double charges on retry",
+                "Microservices separation: Event Service (read-only, high availability), Search Service (search-optimized with Elasticsearch), Booking Service (write-heavy with strong consistency)",
+                "CDC benefits: Decouples write path (PostgreSQL) from read path (Elasticsearch), allows independent scaling, eventual consistency acceptable for search"
+            ]
+        },
+        "tools": ["Amazon RDS for PostgreSQL", "Amazon ElastiCache (Redis/Valkey)", "Amazon OpenSearch Service", "AWS Lambda", "Amazon CloudFront"],
+        "reasoning": "Amazon RDS for ACID transactions and relational data, Redis for distributed locking (ticket reservations) and caching (event data), OpenSearch for fast full-text search with node query caching, Lambda for CDC pipeline and async processing, CloudFront CDN for global content delivery"
     }
 }
