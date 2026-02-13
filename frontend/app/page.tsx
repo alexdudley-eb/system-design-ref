@@ -8,6 +8,9 @@ import ToolDetail from '@/components/ToolDetail'
 import ScenarioPrompts from '@/components/ScenarioPrompts'
 import ReferencePanel from '@/components/ReferencePanel'
 import ModeToggle from '@/components/ModeToggle'
+import PracticeMode from '@/components/PracticeMode'
+import QuizMeMode from '@/components/QuizMeMode'
+import TestMode from '@/components/TestMode'
 import { SearchProvider } from '@/contexts/SearchContext'
 import { Tool } from '@/lib/api'
 
@@ -33,6 +36,9 @@ export default function Home() {
         <div className="header-controls">
           <ReferencePanel />
           <ScenarioPrompts />
+          {!interviewMode && <PracticeMode />}
+          {!interviewMode && <QuizMeMode />}
+          {!interviewMode && <TestMode />}
           <ModeToggle 
             interviewMode={interviewMode} 
             onToggle={() => setInterviewMode(!interviewMode)} 

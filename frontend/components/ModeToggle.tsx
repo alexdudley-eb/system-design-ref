@@ -19,7 +19,7 @@ export default function ModeToggle({ interviewMode, onToggle }: ModeToggleProps)
         aria-label={`Switch to ${interviewMode ? 'study' : 'interview'} mode`}
       >
         <span className={styles.toggleOption}>
-          {interviewMode ? '🎯 Interview' : '📚 Deep Study'}
+          {interviewMode ? '🎯 Interview' : '📚 Study Mode'}
         </span>
       </button>
       <span className={styles.hint}>(Cmd+I)</span>
