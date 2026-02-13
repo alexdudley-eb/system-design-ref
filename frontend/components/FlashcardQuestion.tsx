@@ -76,10 +76,14 @@ export default function FlashcardQuestion({
 
   const handleReveal = () => {
     setIsRevealed(true);
-    
+
     const hasOptions = currentCard.options && currentCard.options.length > 0;
-    
-    if (session.answerMode === 'multiple-choice' && hasOptions && currentCard.correct_answer) {
+
+    if (
+      session.answerMode === "multiple-choice" &&
+      hasOptions &&
+      currentCard.correct_answer
+    ) {
       const isCorrect = userAnswer === currentCard.correct_answer;
       const answer: FlashcardAnswer = {
         questionId: currentCard.id,
@@ -104,15 +108,16 @@ export default function FlashcardQuestion({
 
   const handleMarkCorrect = (isCorrect: boolean) => {
     const hasOptions = currentCard.options && currentCard.options.length > 0;
-    const effectiveAnswerMode = session.answerMode === 'multiple-choice' && hasOptions 
-      ? 'multiple-choice' 
-      : 'write-in';
-    
+    const effectiveAnswerMode =
+      session.answerMode === "multiple-choice" && hasOptions
+        ? "multiple-choice"
+        : "write-in";
+
     const answer: FlashcardAnswer = {
       questionId: currentCard.id,
       userAnswer,
       isCorrect,
-      selfAssessed: effectiveAnswerMode === 'write-in',
+      selfAssessed: effectiveAnswerMode === "write-in",
     };
 
     const updatedSession = {
@@ -157,9 +162,10 @@ export default function FlashcardQuestion({
     Object.keys(session.answers).length === session.flashcards.length;
 
   const hasOptions = currentCard.options && currentCard.options.length > 0;
-  const effectiveAnswerMode = session.answerMode === 'multiple-choice' && hasOptions 
-    ? 'multiple-choice' 
-    : 'write-in';
+  const effectiveAnswerMode =
+    session.answerMode === "multiple-choice" && hasOptions
+      ? "multiple-choice"
+      : "write-in";
 
   return (
     <div className={styles.quizContainer}>
@@ -171,6 +177,7 @@ export default function FlashcardQuestion({
           <span className={styles.questionType}>{currentCard.category}</span>
         </div>
         <QuizTimer
+          sessionId={session.id}
           totalSeconds={session.timeAllocated * 60}
           onTimeUp={handleTimeUp}
           onTick={handleTick}
@@ -182,7 +189,7 @@ export default function FlashcardQuestion({
           <div className={styles.questionCategory}>{currentCard.category}</div>
           <h3 className={styles.questionText}>{currentCard.question}</h3>
 
-          {effectiveAnswerMode === 'write-in' ? (
+          {effectiveAnswerMode === "write-in" ? (
             <>
               <div className={styles.answerSection}>
                 <label className={styles.answerLabel}>Your Answer:</label>
@@ -212,7 +219,9 @@ export default function FlashcardQuestion({
           ) : (
             <>
               <div className={styles.multipleChoiceSection}>
-                <label className={styles.answerLabel}>Select Your Answer:</label>
+                <label className={styles.answerLabel}>
+                  Select Your Answer:
+                </label>
                 <div className={styles.optionsContainer}>
                   {currentCard.options?.map((option: any) => (
                     <label

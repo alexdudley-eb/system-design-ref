@@ -11,7 +11,10 @@ import {
   clearActiveFlashcardSession,
   saveFlashcardSession,
 } from "@/lib/quizStorage";
-import { getQuestionsForReview, updateQuestionPerformance } from "@/lib/spacedRepetition";
+import {
+  getQuestionsForReview,
+  updateQuestionPerformance,
+} from "@/lib/spacedRepetition";
 import FlashcardSetup from "./FlashcardSetup";
 import FlashcardQuestionView from "./FlashcardQuestion";
 import FlashcardResults from "./FlashcardResults";
@@ -33,9 +36,7 @@ export default function QuizMeMode() {
       if (activeSession && !activeSession.completed) {
         setSession(activeSession);
         setScreen("flashcards");
-        setCurrentCardIndex(
-          Object.keys(activeSession.answers || {}).length
-        );
+        setCurrentCardIndex(Object.keys(activeSession.answers || {}).length);
       }
     }
   }, [isOpen]);
@@ -43,34 +44,38 @@ export default function QuizMeMode() {
   const handleStartQuiz = async (
     questionCount: number,
     timeAllocated: number,
-    category: 'all' | 'technology' | 'concept' | 'pattern' | 'numbers',
-    answerMode: 'multiple-choice' | 'write-in'
+    category: "all" | "technology" | "concept" | "pattern" | "numbers",
+    answerMode: "multiple-choice" | "write-in",
   ) => {
     setLoading(true);
     try {
       const response = await getFlashcardSet(questionCount * 2, category);
-      
-      const allQuestionIds = response.questions.map(q => q.id);
-      const prioritizedIds = getQuestionsForReview(allQuestionIds, questionCount);
-      
+
+      const allQuestionIds = response.questions.map((q) => q.id);
+      const prioritizedIds = getQuestionsForReview(
+        allQuestionIds,
+        questionCount,
+      );
+
       const selectedQuestions = prioritizedIds
-        .map(id => response.questions.find(q => q.id === id))
+        .map((id) => response.questions.find((q) => q.id === id))
         .filter((q): q is FlashcardQuestion => q !== undefined)
         .slice(0, questionCount);
-      
+
       if (selectedQuestions.length < questionCount) {
         const remainingCount = questionCount - selectedQuestions.length;
-        const usedIds = new Set(selectedQuestions.map(q => q.id));
+        const usedIds = new Set(selectedQuestions.map((q) => q.id));
         const additionalQuestions = response.questions
-          .filter(q => !usedIds.has(q.id))
+          .filter((q) => !usedIds.has(q.id))
           .slice(0, remainingCount);
         selectedQuestions.push(...additionalQuestions);
       }
-      
+
       const newSession: FlashcardSession = {
+        version: 1,
         id: generateSessionId(),
         date: new Date().toISOString(),
-        mode: 'quiz',
+        mode: "quiz",
         flashcards: selectedQuestions,
         answers: {},
         correctCount: 0,
@@ -96,8 +101,12 @@ export default function QuizMeMode() {
   const handleFinishQuiz = (timeTaken: number) => {
     if (!session) return;
 
-    const correctCount = Object.values(session.answers).filter(a => a.isCorrect).length;
-    const incorrectCount = Object.values(session.answers).filter(a => !a.isCorrect).length;
+    const correctCount = Object.values(session.answers).filter(
+      (a) => a.isCorrect,
+    ).length;
+    const incorrectCount = Object.values(session.answers).filter(
+      (a) => !a.isCorrect,
+    ).length;
 
     Object.entries(session.answers).forEach(([questionId, answer]) => {
       updateQuestionPerformance(questionId, answer.isCorrect);
@@ -141,14 +150,18 @@ export default function QuizMeMode() {
       Object.keys(session.answers).length > 0
     ) {
       const confirmClose = window.confirm(
-        "You have an active quiz session in progress. Your progress will be saved. Do you want to close?"
+        "You have an active quiz session in progress. Your progress will be saved. Do you want to close?",
       );
       if (!confirmClose) return;
     }
 
     setIsOpen(false);
     setTimeout(() => {
-      if (screen === "results" || screen === "history" || screen === "flashcards") {
+      if (
+        screen === "results" ||
+        screen === "history" ||
+        screen === "flashcards"
+      ) {
         setScreen("setup");
         setSession(null);
       }

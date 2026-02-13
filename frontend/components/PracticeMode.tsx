@@ -35,7 +35,7 @@ export default function PracticeMode() {
         setSession(activeSession);
         setScreen("quiz");
         setCurrentQuestionIndex(
-          Object.keys(activeSession.answers || {}).length
+          Object.keys(activeSession.answers || {}).length,
         );
       }
     }
@@ -43,15 +43,16 @@ export default function PracticeMode() {
 
   const handleStartQuiz = async (
     questionCount: number,
-    timeAllocated: number
+    timeAllocated: number,
   ) => {
     setLoading(true);
     try {
       const response = await getQuizQuestions(questionCount);
       const newSession: QuizSession = {
+        version: 1,
         id: generateSessionId(),
         date: new Date().toISOString(),
-        mode: 'practice',
+        mode: "practice",
         questions: response.questions,
         answers: {},
         timeAllocated,
@@ -119,7 +120,7 @@ export default function PracticeMode() {
       Object.keys(session.answers).length > 0
     ) {
       const confirmClose = window.confirm(
-        "You have an active practice session in progress. Your progress will be saved. Do you want to close?"
+        "You have an active practice session in progress. Your progress will be saved. Do you want to close?",
       );
       if (!confirmClose) return;
     }

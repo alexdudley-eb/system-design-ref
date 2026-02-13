@@ -74,14 +74,14 @@ export default function QuizQuestion({
 
   const handleFinish = () => {
     saveCurrentAnswer();
-    
+
     const allAnswered = session.questions.every(
-      (q) => session.answers[q.id] || currentQuestion.id === q.id
+      (q) => session.answers[q.id] || currentQuestion.id === q.id,
     );
 
     if (!allAnswered) {
       const confirmFinish = window.confirm(
-        "You haven't answered all questions. Do you want to finish the quiz anyway?"
+        "You haven't answered all questions. Do you want to finish the quiz anyway?",
       );
       if (!confirmFinish) return;
     }
@@ -103,11 +103,14 @@ export default function QuizQuestion({
             Question {currentIndex + 1} of {totalQuestions}
           </span>
           <span className={styles.questionType}>
-            {currentQuestion.type === "scenario" ? "📊 Scenario" : "💡 Technology Selection"}
+            {currentQuestion.type === "scenario"
+              ? "📊 Scenario"
+              : "💡 Technology Selection"}
           </span>
         </div>
 
         <QuizTimer
+          sessionId={session.id}
           totalSeconds={session.timeAllocated * 60}
           onTimeUp={handleTimeUp}
           onTick={setTimeTaken}
@@ -223,10 +226,7 @@ export default function QuizQuestion({
               Next →
             </button>
           ) : (
-            <button
-              className={styles.finishButton}
-              onClick={handleFinish}
-            >
+            <button className={styles.finishButton} onClick={handleFinish}>
               Finish Quiz
             </button>
           )}

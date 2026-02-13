@@ -40,7 +40,7 @@ export default function TestMode() {
 
   const handleStartTest = async (
     scenarioType: string | null,
-    timeAllocated: number
+    timeAllocated: number,
   ) => {
     setLoading(true);
     try {
@@ -60,9 +60,10 @@ export default function TestMode() {
       };
 
       const newSession: TestSession = {
+        version: 1,
         id: generateSessionId(),
         date: new Date().toISOString(),
-        mode: 'test',
+        mode: "test",
         scenario,
         design: emptyDesign,
         timeAllocated,
@@ -123,7 +124,7 @@ export default function TestMode() {
   const closeModal = () => {
     if (screen === "design" && session && !session.completed) {
       const confirmClose = window.confirm(
-        "You have an active test in progress. Your progress will be saved. Do you want to close?"
+        "You have an active test in progress. Your progress will be saved. Do you want to close?",
       );
       if (!confirmClose) return;
     }

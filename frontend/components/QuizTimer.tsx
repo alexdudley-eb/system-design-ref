@@ -1,16 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { formatTime } from "@/lib/quizStorage";
+import {
+  formatTime,
+  saveTimerState,
+  getTimerState,
+  calculateRemainingTime,
+} from "@/lib/quizStorage";
 import styles from "./PracticeMode.module.css";
 
 interface QuizTimerProps {
+  sessionId: string;
   totalSeconds: number;
   onTimeUp: () => void;
   onTick: (secondsElapsed: number) => void;
 }
 
 export default function QuizTimer({
+  sessionId,
   totalSeconds,
   onTimeUp,
   onTick,
@@ -19,6 +26,23 @@ export default function QuizTimer({
   const [isPaused, setIsPaused] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const secondsElapsedRef = useRef(0);
+  const timerInitialized = useRef(false);
+
+  useEffect(() => {
+    if (timerInitialized.current) return;
+
+    const savedStartTime = getTimerState(sessionId);
+    if (savedStartTime) {
+      const remaining = calculateRemainingTime(savedStartTime, totalSeconds);
+      setSecondsRemaining(remaining);
+      secondsElapsedRef.current = totalSeconds - remaining;
+    } else {
+      const startTime = Date.now();
+      saveTimerState(sessionId, startTime);
+    }
+
+    timerInitialized.current = true;
+  }, [sessionId, totalSeconds]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -47,7 +71,7 @@ export default function QuizTimer({
     intervalRef.current = setInterval(() => {
       setSecondsRemaining((prev) => {
         const newValue = prev - 1;
-        
+
         if (newValue <= 0) {
           if (intervalRef.current) {
             clearInterval(intervalRef.current);
@@ -82,9 +106,7 @@ export default function QuizTimer({
   return (
     <div className={styles.timerContainer}>
       {isPaused && (
-        <div className={styles.timerPausedBadge}>
-          Paused (tab inactive)
-        </div>
+        <div className={styles.timerPausedBadge}>Paused (tab inactive)</div>
       )}
       <div
         className={`${styles.timer} ${isWarning ? styles.timerWarning : ""} ${
@@ -98,9 +120,7 @@ export default function QuizTimer({
         <span className={styles.timerWarningText}>5 minutes remaining</span>
       )}
       {isCritical && (
-        <span className={styles.timerCriticalText}>
-          Final minute!
-        </span>
+        <span className={styles.timerCriticalText}>Final minute!</span>
       )}
     </div>
   );

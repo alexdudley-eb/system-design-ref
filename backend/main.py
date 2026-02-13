@@ -10,7 +10,7 @@ from models import Tool, ToolDeep, Favorite
 from scenario_data import SCENARIO_BLUEPRINTS
 from reference_data import NUMBERS_TO_KNOW, DELIVERY_FRAMEWORK, ASSESSMENT_RUBRIC, COMMON_PATTERNS
 from quiz_data import TECHNOLOGY_QUIZ_QUESTIONS
-from flashcard_data import CONCEPT_QUESTIONS, PATTERN_QUESTIONS, NUMBERS_QUESTIONS, ALL_FLASHCARD_QUESTIONS
+from flashcard_questions import CONCEPT_QUESTIONS, PATTERN_QUESTIONS, NUMBERS_QUESTIONS, ALL_FLASHCARD_QUESTIONS
 import random
 
 app = FastAPI(title="System Design Reference API")
