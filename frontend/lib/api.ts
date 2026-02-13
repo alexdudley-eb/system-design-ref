@@ -157,3 +157,90 @@ export async function removeFavorite(toolId: number): Promise<void> {
 export async function getCategories(): Promise<string[]> {
   return fetchAPI<string[]>('/categories')
 }
+
+export interface QuizQuestionOption {
+  id: string
+  text: string
+}
+
+export interface QuizQuestion {
+  id: string
+  type: 'scenario' | 'technology'
+  question: string
+  category?: string
+  scenario?: ScenarioResponse
+  options?: QuizQuestionOption[]
+  correct_answer?: string
+  explanation?: string
+  key_considerations?: string[]
+  limitations?: string
+}
+
+export interface QuizQuestionsResponse {
+  questions: QuizQuestion[]
+  total: number
+}
+
+export async function getRandomQuizQuestion(type?: 'scenario' | 'technology'): Promise<QuizQuestion> {
+  const params = type ? `?question_type=${type}` : ''
+  return fetchAPI<QuizQuestion>(`/quiz/question${params}`)
+}
+
+export async function getQuizQuestions(count: number = 5): Promise<QuizQuestionsResponse> {
+  return fetchAPI<QuizQuestionsResponse>(`/quiz/questions?count=${count}`)
+}
+
+export interface FlashcardQuestion {
+  id: string
+  category: string
+  question: string
+  answer: string
+  key_points?: string[]
+  explanation?: string
+  context?: string
+  comparison?: Record<string, string>
+}
+
+export interface FlashcardQuestionsResponse {
+  questions: FlashcardQuestion[]
+  total: number
+}
+
+export async function getRandomFlashcard(category?: 'technology' | 'concept' | 'pattern' | 'numbers'): Promise<FlashcardQuestion> {
+  const params = category ? `?category=${category}` : ''
+  return fetchAPI<FlashcardQuestion>(`/flashcard/question${params}`)
+}
+
+export async function getFlashcardSet(
+  count: number = 10,
+  category?: 'all' | 'technology' | 'concept' | 'pattern' | 'numbers'
+): Promise<FlashcardQuestionsResponse> {
+  const params = new URLSearchParams()
+  params.append('count', count.toString())
+  if (category) {
+    params.append('category', category)
+  }
+  return fetchAPI<FlashcardQuestionsResponse>(`/flashcard/questions?${params.toString()}`)
+}
+
+export interface TestScenario {
+  scenario: string
+  title: string
+  description: string
+  scale: {
+    daily_active_users?: string
+    requests_per_second?: string
+    messages_per_day?: string
+    posts_per_day?: string
+    data_size?: string
+  }
+  hints: {
+    out_of_scope: string[]
+    key_constraints: string[]
+  }
+}
+
+export async function getTestScenario(scenarioType?: string): Promise<TestScenario> {
+  const params = scenarioType ? `?scenario_type=${scenarioType}` : ''
+  return fetchAPI<TestScenario>(`/test/scenario${params}`)
+}

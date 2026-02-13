@@ -22,7 +22,39 @@ A local FastAPI + Next.js application for quick reference during system design i
 - 📋 **Assessment Rubric** - Understand how interviewers evaluate candidates (4 competencies)
 - 🔧 **Common Patterns** - 7 critical patterns (Real-Time Updates, Contention, Multi-Step Processes, Scaling Reads/Writes, Large Blobs, Long-Running Tasks)
 
-### NEW: Extended Scenario Coverage
+### NEW: Three Learning Modes
+
+#### 🔄 Practice Mode - Learn with Full Context
+
+- 📊 **Mixed Questions** - 70% scenario questions + 30% technology selection questions
+- 🔍 **Full Details** - Complete scenario information including requirements, entities, API, architecture
+- ⏱ **Configurable Timer** - 15, 30, 45, or 60 minutes with visual warnings
+- ✅ **Comprehensive Assessment** - Evaluate yourself against Delivery Framework & Assessment Rubric
+- 📈 **Progress Tracking** - Local history of practice sessions with scores and timing
+- 🎓 **Technology Deep Dive** - Test your knowledge of when and why to use specific technologies
+
+#### 🎯 Quiz Me - Flashcard Knowledge Testing
+
+- ⚡ **Rapid-Fire Questions** - Quick flashcard-style questions for focused knowledge testing
+- 📚 **Four Categories** - Technology (40%), Concepts (30%), Patterns (20%), Numbers (10%)
+- ✍️ **Write & Reveal** - Type your answer, then reveal to check against correct answer
+- ✓/✗ **Self-Assessment** - Mark yourself correct or incorrect
+- 🎲 **Category Filtering** - Focus on specific areas or mix all categories
+- ⏱ **Quick Sessions** - 5-20 minute sessions, 5-20 questions
+- 📊 **Progress Tracking** - Track correct/incorrect answers and time per question
+
+#### 📝 Test Mode - Interview Simulation
+
+- 🎯 **Blank Canvas** - Design from scratch with minimal information (title, description, scale, hints)
+- 🚫 **No Guidance** - You fill in all requirements, entities, API endpoints, and architecture
+- 📋 **Structured Fields** - Organized tabs for Requirements, Entities & API, Architecture, Deep Dives, Notes
+- ⏱ **Interview Timing** - 30, 45, or 60 minute sessions
+- 🔍 **Scenario Selection** - Random or choose specific scenarios (Uber, WhatsApp, Instagram, etc.)
+- ✅ **Full Assessment** - Comprehensive evaluation against interview rubric
+- 📊 **Comparison View** - Review your design with detailed breakdown
+- 💾 **Session History** - Track all test attempts with scores and timing
+
+### Extended Scenario Coverage
 
 - 💳 **Payments** - Strong consistency, idempotency, two-phase commit
 - 💬 **Chat** - Real-time messaging with WebSockets
@@ -33,9 +65,9 @@ A local FastAPI + Next.js application for quick reference during system design i
 - 🚗 **Uber** - Geospatial matching, real-time location tracking
 - 🔗 **Bit.ly** - URL shortening with high read-to-write ratio
 - 📦 **Dropbox** - Large file uploads, chunking, presigned URLs
-- 🚦 **Rate Limiter** (NEW) - Distributed rate limiting with Redis
-- 📱 **WhatsApp** (NEW) - Real-time messaging at scale, offline delivery
-- ▶️ **YouTube** (NEW) - Video transcoding, adaptive streaming, CDN
+- 🚦 **Rate Limiter** - Distributed rate limiting with Redis
+- 📱 **WhatsApp** - Real-time messaging at scale, offline delivery
+- ▶️ **YouTube** - Video transcoding, adaptive streaming, CDN
 
 ## Prerequisites
 
@@ -170,6 +202,37 @@ git push
   - Interview prompts
 
 Toggle between modes with `Cmd/Ctrl + I` or the mode switcher in the header.
+
+### Quiz Me Mode
+
+Click **🎯 Quiz Me** in the header to practice with randomized questions:
+
+#### How It Works
+
+1. **Configure Your Quiz**: Choose question count (1, 3, 5) and time limit (15-60 minutes)
+2. **Answer Questions**: Mix of scenario-based system design problems and technology selection questions
+3. **Self-Assessment**: Evaluate yourself against the Delivery Framework and Assessment Rubric
+4. **Track Progress**: Review results, identify areas for improvement, and view quiz history
+
+#### Question Types
+
+**Scenario Questions (70%)**:
+- Full system design problems from the 12 scenarios (Uber, WhatsApp, Payments, etc.)
+- Document your approach following the Delivery Framework
+- Practice end-to-end system design thinking
+
+**Technology Selection Questions (30%)**:
+- Multiple choice questions testing when and why to use specific technologies
+- Covers databases, caching, queues, storage, consistency models, and more
+- Includes explanations for correct answers with key considerations and limitations
+
+#### Self-Assessment Criteria
+
+- **Delivery Framework Alignment**: Requirements, High-Level Design, Deep Dives, Trade-offs
+- **Assessment Rubric Competencies**: Problem Navigation, Solution Design, Technical Excellence, Communication
+- **Technology-Specific**: Correct tech choice, reasoning, pros/cons, limitations, alternatives
+
+All quiz sessions are saved locally with your scores, timing, and notes for future review.
 
 ### Scenario Prompts
 
@@ -393,7 +456,10 @@ These additions ensure you have both **tactical knowledge** (tools, technologies
 ## Future Enhancements
 
 - [ ] Semantic search with embeddings
-- [ ] "Quiz me" mode for practice (random scenario + timer + self-assessment checklist)
+- [x] "Quiz me" mode for practice (random scenario + timer + self-assessment checklist) ✅
+- [ ] Spaced repetition for quiz questions
+- [ ] Difficulty levels (Junior, Mid-Level, Senior, Staff+)
+- [ ] Export quiz history as PDF/markdown
 - [ ] Export favorites as markdown
 - [ ] Dark mode
 - [ ] Mobile responsive improvements

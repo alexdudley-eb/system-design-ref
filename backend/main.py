@@ -9,6 +9,9 @@ from database import get_db, init_db
 from models import Tool, ToolDeep, Favorite
 from scenario_data import SCENARIO_BLUEPRINTS
 from reference_data import NUMBERS_TO_KNOW, DELIVERY_FRAMEWORK, ASSESSMENT_RUBRIC, COMMON_PATTERNS
+from quiz_data import TECHNOLOGY_QUIZ_QUESTIONS
+from flashcard_questions import CONCEPT_QUESTIONS, PATTERN_QUESTIONS, NUMBERS_QUESTIONS, ALL_FLASHCARD_QUESTIONS
+import random
 
 app = FastAPI(title="System Design Reference API")
 
@@ -238,6 +241,298 @@ def get_pattern_detail(pattern_name: str):
     if not pattern:
         raise HTTPException(status_code=404, detail="Pattern not found")
     return pattern
+
+@app.get("/api/quiz/question")
+def get_random_quiz_question(
+    question_type: Optional[str] = Query(None, regex="^(scenario|technology)$"),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a random quiz question.
+    question_type: 'scenario', 'technology', or None (random choice)
+    """
+    if question_type is None:
+        question_type = random.choices(["scenario", "technology"], weights=[0.7, 0.3])[0]
+    
+    if question_type == "scenario":
+        scenario_types = list(SCENARIO_BLUEPRINTS.keys())
+        selected_scenario = random.choice(scenario_types)
+        blueprint = SCENARIO_BLUEPRINTS[selected_scenario]
+        tool_names = blueprint["tools"]
+        tools = db.query(Tool).filter(Tool.name.in_(tool_names)).all()
+        
+        favorite_tool_ids = {f.tool_id for f in db.query(Favorite.tool_id).all()}
+        
+        tool_results = []
+        for tool in tools:
+            tool_dict = ToolResponse.from_orm(tool).dict()
+            tool_dict["is_favorited"] = tool.id in favorite_tool_ids
+            tool_results.append(tool_dict)
+        
+        return {
+            "id": f"scenario-{selected_scenario}",
+            "type": "scenario",
+            "question": f"Design a {blueprint['title']}",
+            "scenario": {
+                "scenario": selected_scenario,
+                "title": blueprint["title"],
+                "description": blueprint["description"],
+                "requirements": blueprint["requirements"],
+                "core_entities": blueprint["core_entities"],
+                "api": blueprint["api"],
+                "high_level": blueprint["high_level"],
+                "deep_dive": blueprint["deep_dive"],
+                "reasoning": blueprint["reasoning"],
+                "tools": tool_results,
+            }
+        }
+    else:
+        tech_question = random.choice(TECHNOLOGY_QUIZ_QUESTIONS)
+        return {
+            "id": tech_question["id"],
+            "type": "technology",
+            "category": tech_question["category"],
+            "question": tech_question["question"],
+            "options": tech_question["options"],
+            "correct_answer": tech_question["correct_answer"],
+            "explanation": tech_question["explanation"],
+            "key_considerations": tech_question["key_considerations"],
+            "limitations": tech_question["limitations"]
+        }
+
+@app.get("/api/quiz/questions")
+def get_quiz_questions(
+    count: int = Query(5, ge=1, le=10),
+    db: Session = Depends(get_db)
+):
+    """
+    Get multiple quiz questions for a quiz session.
+    count: number of questions (1-10), default 5
+    Returns a mix of 70% scenario questions and 30% technology questions
+    """
+    questions = []
+    used_scenarios = set()
+    used_tech_questions = set()
+    
+    scenario_count = max(1, int(count * 0.7))
+    tech_count = count - scenario_count
+    
+    scenario_types = list(SCENARIO_BLUEPRINTS.keys())
+    
+    for i in range(scenario_count):
+        available_scenarios = [s for s in scenario_types if s not in used_scenarios]
+        if not available_scenarios:
+            used_scenarios.clear()
+            available_scenarios = scenario_types
+        
+        selected_scenario = random.choice(available_scenarios)
+        used_scenarios.add(selected_scenario)
+        
+        blueprint = SCENARIO_BLUEPRINTS[selected_scenario]
+        tool_names = blueprint["tools"]
+        tools = db.query(Tool).filter(Tool.name.in_(tool_names)).all()
+        
+        favorite_tool_ids = {f.tool_id for f in db.query(Favorite.tool_id).all()}
+        
+        tool_results = []
+        for tool in tools:
+            tool_dict = ToolResponse.from_orm(tool).dict()
+            tool_dict["is_favorited"] = tool.id in favorite_tool_ids
+            tool_results.append(tool_dict)
+        
+        questions.append({
+            "id": f"scenario-{selected_scenario}",
+            "type": "scenario",
+            "question": f"Design a {blueprint['title']}",
+            "scenario": {
+                "scenario": selected_scenario,
+                "title": blueprint["title"],
+                "description": blueprint["description"],
+                "requirements": blueprint["requirements"],
+                "core_entities": blueprint["core_entities"],
+                "api": blueprint["api"],
+                "high_level": blueprint["high_level"],
+                "deep_dive": blueprint["deep_dive"],
+                "reasoning": blueprint["reasoning"],
+                "tools": tool_results,
+            }
+        })
+    
+    for i in range(tech_count):
+        available_tech = [q for q in TECHNOLOGY_QUIZ_QUESTIONS if q["id"] not in used_tech_questions]
+        if not available_tech:
+            used_tech_questions.clear()
+            available_tech = TECHNOLOGY_QUIZ_QUESTIONS
+        
+        tech_question = random.choice(available_tech)
+        used_tech_questions.add(tech_question["id"])
+        
+        questions.append({
+            "id": tech_question["id"],
+            "type": "technology",
+            "category": tech_question["category"],
+            "question": tech_question["question"],
+            "options": tech_question["options"],
+            "correct_answer": tech_question["correct_answer"],
+            "explanation": tech_question["explanation"],
+            "key_considerations": tech_question["key_considerations"],
+            "limitations": tech_question["limitations"]
+        })
+    
+    random.shuffle(questions)
+    
+    return {"questions": questions, "total": len(questions)}
+
+@app.get("/api/flashcard/question")
+def get_random_flashcard(
+    category: Optional[str] = Query(None, regex="^(technology|concept|pattern|numbers)$")
+):
+    """
+    Get a random flashcard question.
+    category: 'technology', 'concept', 'pattern', 'numbers', or None (weighted random choice)
+    Weights: 40% technology (reusing from quiz_data), 30% concepts, 20% patterns, 10% numbers
+    """
+    if category is None:
+        category = random.choices(
+            ["technology", "concept", "pattern", "numbers"],
+            weights=[0.4, 0.3, 0.2, 0.1]
+        )[0]
+    
+    if category == "technology":
+        tech_question = random.choice(TECHNOLOGY_QUIZ_QUESTIONS)
+        return {
+            "id": tech_question["id"],
+            "category": tech_question["category"],
+            "question": tech_question["question"],
+            "answer": tech_question.get("options", [{}])[ord(tech_question["correct_answer"]) - ord('a')].get("text", tech_question["correct_answer"]) if tech_question.get("options") else tech_question["correct_answer"],
+            "key_points": tech_question.get("key_considerations", []),
+            "explanation": tech_question.get("explanation", ""),
+            "options": tech_question.get("options", []),
+            "correct_answer": tech_question.get("correct_answer", "")
+        }
+    elif category == "concept":
+        question = random.choice(CONCEPT_QUESTIONS)
+        return question
+    elif category == "pattern":
+        question = random.choice(PATTERN_QUESTIONS)
+        return question
+    else:
+        question = random.choice(NUMBERS_QUESTIONS)
+        return question
+
+@app.get("/api/flashcard/questions")
+def get_flashcard_set(
+    count: int = Query(10, ge=5, le=20),
+    category: Optional[str] = Query(None, regex="^(all|technology|concept|pattern|numbers)$")
+):
+    """
+    Get multiple flashcard questions for a quiz session.
+    count: number of questions (5-20), default 10
+    category: filter by category or 'all' for mixed set
+    Returns a mixed set with no duplicates
+    """
+    if category == "technology":
+        available_questions = [
+            {
+                "id": q["id"],
+                "category": q["category"],
+                "question": q["question"],
+                "answer": q.get("options", [{}])[ord(q["correct_answer"]) - ord('a')].get("text", q["correct_answer"]) if q.get("options") else q["correct_answer"],
+                "key_points": q.get("key_considerations", []),
+                "explanation": q.get("explanation", ""),
+                "options": q.get("options", []),
+                "correct_answer": q.get("correct_answer", "")
+            }
+            for q in TECHNOLOGY_QUIZ_QUESTIONS
+        ]
+    elif category == "concept":
+        available_questions = CONCEPT_QUESTIONS.copy()
+    elif category == "pattern":
+        available_questions = PATTERN_QUESTIONS.copy()
+    elif category == "numbers":
+        available_questions = NUMBERS_QUESTIONS.copy()
+    else:
+        tech_questions = [
+            {
+                "id": q["id"],
+                "category": q["category"],
+                "question": q["question"],
+                "answer": q.get("options", [{}])[ord(q["correct_answer"]) - ord('a')].get("text", q["correct_answer"]) if q.get("options") else q["correct_answer"],
+                "key_points": q.get("key_considerations", []),
+                "explanation": q.get("explanation", ""),
+                "options": q.get("options", []),
+                "correct_answer": q.get("correct_answer", "")
+            }
+            for q in TECHNOLOGY_QUIZ_QUESTIONS
+        ]
+        available_questions = tech_questions + CONCEPT_QUESTIONS + PATTERN_QUESTIONS + NUMBERS_QUESTIONS
+    
+    if len(available_questions) < count:
+        selected_questions = available_questions
+    else:
+        selected_questions = random.sample(available_questions, count)
+    
+    random.shuffle(selected_questions)
+    
+    return {"questions": selected_questions, "total": len(selected_questions)}
+
+@app.get("/api/test/scenario")
+def get_test_scenario(
+    scenario_type: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Get minimal scenario info for test mode.
+    Returns only: title, description, scale, hints
+    EXCLUDES: requirements details, entities, API, high_level, deep_dive, reasoning
+    """
+    if scenario_type is None:
+        scenario_types = list(SCENARIO_BLUEPRINTS.keys())
+        scenario_type = random.choice(scenario_types)
+    
+    if scenario_type not in SCENARIO_BLUEPRINTS:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    
+    blueprint = SCENARIO_BLUEPRINTS[scenario_type]
+    
+    scale_info = {}
+    if "DAU" in blueprint["description"] or "users" in blueprint["description"].lower():
+        if "uber" in scenario_type.lower() or "lyft" in scenario_type.lower():
+            scale_info = {
+                "daily_active_users": "100M DAU",
+                "requests_per_second": "Peak: 1M requests/second",
+                "data_size": "100+ PB ride history"
+            }
+        elif "whatsapp" in scenario_type.lower() or "messenger" in scenario_type.lower():
+            scale_info = {
+                "daily_active_users": "2B DAU",
+                "messages_per_day": "100B messages/day",
+                "data_size": "Multiple PB of messages"
+            }
+        elif "instagram" in scenario_type.lower() or "twitter" in scenario_type.lower():
+            scale_info = {
+                "daily_active_users": "500M+ DAU",
+                "posts_per_day": "100M+ posts/day",
+                "data_size": "Multiple PB of media"
+            }
+    
+    hints = {
+        "out_of_scope": blueprint["requirements"].get("out_of_scope", []),
+        "key_constraints": []
+    }
+    
+    if blueprint["requirements"].get("non_functional", []):
+        for req in blueprint["requirements"]["non_functional"]:
+            if "latency" in req.lower() or "consistency" in req.lower() or "availability" in req.lower():
+                hints["key_constraints"].append(req)
+    
+    return {
+        "scenario": scenario_type,
+        "title": blueprint["title"],
+        "description": blueprint["description"],
+        "scale": scale_info,
+        "hints": hints
+    }
 
 if __name__ == "__main__":
     import uvicorn
